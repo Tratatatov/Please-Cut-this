@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class VideoTimelineUI : MonoBehaviour
 {
@@ -11,7 +12,7 @@ public class VideoTimelineUI : MonoBehaviour
     public Slider progressSlider;
 
     [Tooltip("Компонент для отображения текста времени (TextMeshPro)")]
-    public TMPro.TMP_Text timeTextTMP;
+    public TMP_Text timeTextTMP;
 
     [Tooltip("Кнопка воспроизведения/паузы")]
     public Button playPauseButton;
@@ -26,23 +27,23 @@ public class VideoTimelineUI : MonoBehaviour
     public Sprite pauseSprite;
 
     [Header("Управление воспроизведением")]
-    [Tooltip("Кнопка перемотки назад (меняет скорость на отрицательную)")]
+    [Tooltip("Кнопка перемотки назад (зажмите для отмотки)")]
     public Button rewindBackButton;
 
-    [Tooltip("Список доступных скоростей отмотки назад (отрицательные значения)")]
-    public float[] rewindSpeeds = new float[] { -1f, -2f, -4f };
+    [Tooltip("Скорость отмотки назад (отрицательное значение, например -3)")]
+    public float rewindHoldSpeed = -3f;
 
-    [Tooltip("Кнопка изменения скорости воспроизведения (перемотки вперед)")]
+    [Tooltip("Кнопка быстрой перемотки вперед (зажмите для ускорения)")]
     public Button changeSpeedButton;
 
-    [Tooltip("Список доступных скоростей перемотки вперед (положительные значения)")]
-    public float[] forwardSpeeds = new float[] { 1f, 1.5f, 2f, 3f };
+    [Tooltip("Скорость быстрой перемотки вперед (положительное значение, например 3)")]
+    public float forwardHoldSpeed = 3f;
 
     [Tooltip("Текстовый компонент для отображения текущей скорости (необязательно)")]
     public TMPro.TMP_Text speedTextTMP;
 
-    private int _currentRewindSpeedIndex = 0;
-    private int _currentForwardSpeedIndex = 0;
+    private float _speedBeforeHold = 0f;
+    private bool _isHoldingButton = false;
 
     private void Start()
     {
@@ -74,12 +75,12 @@ public class VideoTimelineUI : MonoBehaviour
 
         if (rewindBackButton != null)
         {
-            rewindBackButton.onClick.AddListener(OnRewindBackButtonClicked);
+            SetupButtonHold(rewindBackButton, OnRewindPointerDown, OnHoldPointerUp);
         }
 
         if (changeSpeedButton != null)
         {
-            changeSpeedButton.onClick.AddListener(OnChangeSpeedButtonClicked);
+            SetupButtonHold(changeSpeedButton, OnForwardPointerDown, OnHoldPointerUp);
         }
 
         UpdateSpeedUI();
@@ -96,15 +97,62 @@ public class VideoTimelineUI : MonoBehaviour
         {
             setCutIntervalButton.onClick.RemoveListener(OnSetCutIntervalButtonClicked);
         }
+    }
 
-        if (rewindBackButton != null)
+    private void SetupButtonHold(Button button, System.Action onDown, System.Action onUp)
+    {
+        if (button == null) return;
+
+        EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null)
         {
-            rewindBackButton.onClick.RemoveListener(OnRewindBackButtonClicked);
+            trigger = button.gameObject.AddComponent<EventTrigger>();
         }
 
-        if (changeSpeedButton != null)
+        EventTrigger.Entry entryDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        entryDown.callback.AddListener((data) => { onDown(); });
+        trigger.triggers.Add(entryDown);
+
+        EventTrigger.Entry entryUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        entryUp.callback.AddListener((data) => { onUp(); });
+        trigger.triggers.Add(entryUp);
+    }
+
+    private void OnRewindPointerDown()
+    {
+        if (videoPlayerManager != null)
         {
-            changeSpeedButton.onClick.RemoveListener(OnChangeSpeedButtonClicked);
+            if (!_isHoldingButton)
+            {
+                _speedBeforeHold = videoPlayerManager.PlaybackSpeed;
+                _isHoldingButton = true;
+            }
+            videoPlayerManager.PlaybackSpeed = rewindHoldSpeed;
+            UpdateSpeedUI();
+        }
+    }
+
+    private void OnForwardPointerDown()
+    {
+        if (videoPlayerManager != null)
+        {
+            if (!_isHoldingButton)
+            {
+                _speedBeforeHold = videoPlayerManager.PlaybackSpeed;
+                _isHoldingButton = true;
+            }
+            videoPlayerManager.PlaybackSpeed = forwardHoldSpeed;
+            UpdateSpeedUI();
+        }
+    }
+
+    private void OnHoldPointerUp()
+    {
+        if (videoPlayerManager != null && _isHoldingButton)
+        {
+            videoPlayerManager.PlaybackSpeed = _speedBeforeHold;
+            _isHoldingButton = false;
+            UpdateSpeedUI();
         }
     }
 
@@ -147,47 +195,9 @@ public class VideoTimelineUI : MonoBehaviour
         else
         {
             videoPlayerManager.PlaybackSpeed = 1f;
-            _currentForwardSpeedIndex = 0;
         }
+        _speedBeforeHold = videoPlayerManager.PlaybackSpeed;
         UpdateSpeedUI();
-    }
-
-    private void OnRewindBackButtonClicked()
-    {
-        if (videoPlayerManager != null && rewindSpeeds != null && rewindSpeeds.Length > 0)
-        {
-            if (videoPlayerManager.PlaybackSpeed >= 0f)
-            {
-                _currentRewindSpeedIndex = 0;
-            }
-            else
-            {
-                _currentRewindSpeedIndex = (_currentRewindSpeedIndex + 1) % rewindSpeeds.Length;
-            }
-
-            float targetSpeed = rewindSpeeds[_currentRewindSpeedIndex];
-            videoPlayerManager.PlaybackSpeed = targetSpeed;
-            UpdateSpeedUI();
-        }
-    }
-
-    private void OnChangeSpeedButtonClicked()
-    {
-        if (videoPlayerManager != null && forwardSpeeds != null && forwardSpeeds.Length > 0)
-        {
-            if (videoPlayerManager.PlaybackSpeed <= 0f)
-            {
-                _currentForwardSpeedIndex = 0;
-            }
-            else
-            {
-                _currentForwardSpeedIndex = (_currentForwardSpeedIndex + 1) % forwardSpeeds.Length;
-            }
-
-            float targetSpeed = forwardSpeeds[_currentForwardSpeedIndex];
-            videoPlayerManager.PlaybackSpeed = targetSpeed;
-            UpdateSpeedUI();
-        }
     }
 
     private void UpdateSpeedUI()
