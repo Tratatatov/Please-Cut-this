@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.badranraza.ide.antigravity": {
+      "version": "https://github.com/BadranRaza/com.unity.ide.antigravity.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.test-framework": "1.1.9"
+      },
+      "hash": "56c48cac20e412ac57aaaa47516e5d6161279acd"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.12",
       "depth": 0,
