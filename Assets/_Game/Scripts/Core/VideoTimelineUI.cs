@@ -1,15 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 
 public class VideoTimelineUI : MonoBehaviour
 {
-    [Header("Менеджеры")]
-    [Tooltip("Ссылка на менеджер воспроизведения видео")]
-    public VideoPlayerManager videoPlayerManager;
-
-    [Tooltip("Ссылка на менеджер вырезов (если есть)")]
-    public VideoCutManager videoCutManager;
+    private VideoPlayerManager videoPlayerManager;
+    private VideoCutManager videoCutManager;
 
     [Header("UI Компоненты")]
     [Tooltip("Слайдер прогресса воспроизведения (если пустой, попытается найти на этом же GameObject)")]
@@ -30,11 +25,31 @@ public class VideoTimelineUI : MonoBehaviour
     [Tooltip("Спрайт иконки паузы (Pause)")]
     public Sprite pauseSprite;
 
-    private bool _isDraggingSlider = false;
-    private bool _wasPlayingBeforeDrag = false;
+    [Header("Управление воспроизведением")]
+    [Tooltip("Кнопка перемотки назад (меняет скорость на отрицательную)")]
+    public Button rewindBackButton;
+
+    [Tooltip("Список доступных скоростей отмотки назад (отрицательные значения)")]
+    public float[] rewindSpeeds = new float[] { -1f, -2f, -4f };
+
+    [Tooltip("Кнопка изменения скорости воспроизведения (перемотки вперед)")]
+    public Button changeSpeedButton;
+
+    [Tooltip("Список доступных скоростей перемотки вперед (положительные значения)")]
+    public float[] forwardSpeeds = new float[] { 1f, 1.5f, 2f, 3f };
+
+    [Tooltip("Текстовый компонент для отображения текущей скорости (необязательно)")]
+    public TMPro.TMP_Text speedTextTMP;
+
+    private int _currentRewindSpeedIndex = 0;
+    private int _currentForwardSpeedIndex = 0;
 
     private void Start()
     {
+        // Получаем зависимости через ServiceLocator
+        videoPlayerManager = ServiceLocator.Get<VideoPlayerManager>();
+        videoCutManager = ServiceLocator.Get<VideoCutManager>();
+
         // Настройка дефолтных UI компонентов
         if (progressSlider == null)
         {
@@ -43,24 +58,8 @@ public class VideoTimelineUI : MonoBehaviour
 
         if (progressSlider != null)
         {
-            progressSlider.onValueChanged.AddListener(OnSliderValueChanged);
-
-            // Навешиваем EventTrigger прямо на объект слайдера для гарантированного перехвата событий мыши/тача
-            EventTrigger trigger = progressSlider.gameObject.GetComponent<EventTrigger>();
-            if (trigger == null)
-            {
-                trigger = progressSlider.gameObject.AddComponent<EventTrigger>();
-            }
-
-            // Добавляем PointerDown триггер
-            EventTrigger.Entry entryDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
-            entryDown.callback.AddListener((data) => { OnSliderPointerDown((PointerEventData)data); });
-            trigger.triggers.Add(entryDown);
-
-            // Добавляем PointerUp триггер
-            EventTrigger.Entry entryUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
-            entryUp.callback.AddListener((data) => { OnSliderPointerUp((PointerEventData)data); });
-            trigger.triggers.Add(entryUp);
+            // Отключаем интерактивность слайдера, делая его read-only индикатором
+            progressSlider.interactable = false;
         }
 
         if (playPauseButton != null)
@@ -72,15 +71,22 @@ public class VideoTimelineUI : MonoBehaviour
         {
             setCutIntervalButton.onClick.AddListener(OnSetCutIntervalButtonClicked);
         }
+
+        if (rewindBackButton != null)
+        {
+            rewindBackButton.onClick.AddListener(OnRewindBackButtonClicked);
+        }
+
+        if (changeSpeedButton != null)
+        {
+            changeSpeedButton.onClick.AddListener(OnChangeSpeedButtonClicked);
+        }
+
+        UpdateSpeedUI();
     }
 
     private void OnDestroy()
     {
-        if (progressSlider != null)
-        {
-            progressSlider.onValueChanged.RemoveListener(OnSliderValueChanged);
-        }
-
         if (playPauseButton != null)
         {
             playPauseButton.onClick.RemoveListener(OnPlayPauseButtonClicked);
@@ -89,6 +95,16 @@ public class VideoTimelineUI : MonoBehaviour
         if (setCutIntervalButton != null)
         {
             setCutIntervalButton.onClick.RemoveListener(OnSetCutIntervalButtonClicked);
+        }
+
+        if (rewindBackButton != null)
+        {
+            rewindBackButton.onClick.RemoveListener(OnRewindBackButtonClicked);
+        }
+
+        if (changeSpeedButton != null)
+        {
+            changeSpeedButton.onClick.RemoveListener(OnChangeSpeedButtonClicked);
         }
     }
 
@@ -105,8 +121,8 @@ public class VideoTimelineUI : MonoBehaviour
         if (videoPlayerManager == null) 
             return;
 
-        // Обновляем значение слайдера в соответствии с видео, если пользователь его не перетаскивает
-        if (!_isDraggingSlider && progressSlider != null && videoPlayerManager.IsPrepared && videoPlayerManager.Duration > 0)
+        // Обновляем значение слайдера в соответствии с видео
+        if (progressSlider != null && videoPlayerManager.IsPrepared && videoPlayerManager.Duration > 0)
         {
             float progress = (float)(videoPlayerManager.CurrentTime / videoPlayerManager.Duration);
             progressSlider.SetValueWithoutNotify(progress);
@@ -124,13 +140,61 @@ public class VideoTimelineUI : MonoBehaviour
         if (videoPlayerManager == null) 
             return;
 
-        if (videoPlayerManager.IsPlaying)
+        if (videoPlayerManager.PlaybackSpeed != 0f)
         {
-            videoPlayerManager.Pause();
+            videoPlayerManager.PlaybackSpeed = 0f;
         }
         else
         {
-            videoPlayerManager.Play();
+            videoPlayerManager.PlaybackSpeed = 1f;
+            _currentForwardSpeedIndex = 0;
+        }
+        UpdateSpeedUI();
+    }
+
+    private void OnRewindBackButtonClicked()
+    {
+        if (videoPlayerManager != null && rewindSpeeds != null && rewindSpeeds.Length > 0)
+        {
+            if (videoPlayerManager.PlaybackSpeed >= 0f)
+            {
+                _currentRewindSpeedIndex = 0;
+            }
+            else
+            {
+                _currentRewindSpeedIndex = (_currentRewindSpeedIndex + 1) % rewindSpeeds.Length;
+            }
+
+            float targetSpeed = rewindSpeeds[_currentRewindSpeedIndex];
+            videoPlayerManager.PlaybackSpeed = targetSpeed;
+            UpdateSpeedUI();
+        }
+    }
+
+    private void OnChangeSpeedButtonClicked()
+    {
+        if (videoPlayerManager != null && forwardSpeeds != null && forwardSpeeds.Length > 0)
+        {
+            if (videoPlayerManager.PlaybackSpeed <= 0f)
+            {
+                _currentForwardSpeedIndex = 0;
+            }
+            else
+            {
+                _currentForwardSpeedIndex = (_currentForwardSpeedIndex + 1) % forwardSpeeds.Length;
+            }
+
+            float targetSpeed = forwardSpeeds[_currentForwardSpeedIndex];
+            videoPlayerManager.PlaybackSpeed = targetSpeed;
+            UpdateSpeedUI();
+        }
+    }
+
+    private void UpdateSpeedUI()
+    {
+        if (speedTextTMP != null && videoPlayerManager != null)
+        {
+            speedTextTMP.text = $"{videoPlayerManager.PlaybackSpeed}x";
         }
     }
 
@@ -143,50 +207,12 @@ public class VideoTimelineUI : MonoBehaviour
         if (btnImage == null) 
             return;
 
-        bool isPlaying = videoPlayerManager != null && videoPlayerManager.IsPlaying;
+        bool isPlaying = videoPlayerManager != null && videoPlayerManager.PlaybackSpeed != 0f;
         Sprite targetSprite = isPlaying ? pauseSprite : playSprite;
 
         if (btnImage.sprite != targetSprite)
         {
             btnImage.sprite = targetSprite;
-        }
-    }
-
-    private void OnSliderValueChanged(float value)
-    {
-        // Перематываем только во время перетаскивания пользователем
-        if (_isDraggingSlider && videoPlayerManager != null && videoPlayerManager.IsPrepared && videoPlayerManager.Duration > 0)
-        {
-            double targetTime = value * videoPlayerManager.Duration;
-            videoPlayerManager.Seek(targetTime);
-        }
-    }
-
-    private void OnSliderPointerDown(PointerEventData eventData)
-    {
-        _isDraggingSlider = true;
-        if (videoPlayerManager != null)
-        {
-            _wasPlayingBeforeDrag = videoPlayerManager.IsPlaying;
-            if (_wasPlayingBeforeDrag)
-            {
-                videoPlayerManager.Pause();
-            }
-        }
-    }
-
-    private void OnSliderPointerUp(PointerEventData eventData)
-    {
-        _isDraggingSlider = false;
-        if (videoPlayerManager != null && videoPlayerManager.IsPrepared && videoPlayerManager.Duration > 0 && progressSlider != null)
-        {
-            double targetTime = progressSlider.value * videoPlayerManager.Duration;
-            videoPlayerManager.Seek(targetTime);
-
-            if (_wasPlayingBeforeDrag)
-            {
-                videoPlayerManager.Play();
-            }
         }
     }
 
@@ -201,10 +227,7 @@ public class VideoTimelineUI : MonoBehaviour
             return;
         }
 
-        // Если пользователь тянет слайдер, показываем время в точке перетаскивания, иначе - текущее время видео
-        double displayTime = (_isDraggingSlider && progressSlider != null) 
-            ? progressSlider.value * videoPlayerManager.Duration 
-            : videoPlayerManager.CurrentTime;
+        double displayTime = videoPlayerManager.CurrentTime;
 
         string currentStr = FormatTime(displayTime);
         string durationStr = FormatTime(videoPlayerManager.Duration);

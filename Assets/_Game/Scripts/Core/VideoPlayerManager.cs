@@ -2,22 +2,62 @@ using System;
 using UnityEngine;
 using UnityEngine.Video;
 
-public class VideoPlayerManager : MonoBehaviour
+public class VideoPlayerManager : IInitializable, IUpdatable, IDisposableService
 {
-    [Tooltip("Ссылка на компонент VideoPlayer. Если не назначен, попытается найти его на этом же GameObject.")]
-    public VideoPlayer videoPlayer;
+    private VideoPlayer _videoPlayer;
+
+    private float _customPlaybackSpeed = 1.0f;
+    private bool _isRewinding = false;
+    private double _rewindSpeed = 1.0;
+    private double _targetRewindTime = 0.0;
 
     /// <summary>
     /// Current playback time in seconds.
     /// </summary>
     public double CurrentTime
     {
-        get => videoPlayer != null ? videoPlayer.time : 0.0;
+        get => _videoPlayer != null ? _videoPlayer.time : 0.0;
         set
         {
-            if (videoPlayer != null)
+            if (_videoPlayer != null)
             {
-                videoPlayer.time = value;
+                _videoPlayer.time = value;
+                if (_isRewinding)
+                {
+                    _targetRewindTime = value;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the playback speed of the video (positive for forward, negative for rewind).
+    /// </summary>
+    public float PlaybackSpeed
+    {
+        get => _customPlaybackSpeed;
+        set
+        {
+            _customPlaybackSpeed = value;
+            if (value > 0f)
+            {
+                StopRewinding();
+                if (_videoPlayer != null)
+                {
+                    _videoPlayer.playbackSpeed = value;
+                    Play();
+                }
+                Debug.Log($"[VideoPlayerManager] Скорость воспроизведения установлена на: {value}x");
+            }
+            else if (value < 0f)
+            {
+                StartRewinding(-value);
+            }
+            else
+            {
+                StopRewinding();
+                Pause();
+                Debug.Log($"[VideoPlayerManager] Воспроизведение приостановлено");
             }
         }
     }
@@ -25,22 +65,22 @@ public class VideoPlayerManager : MonoBehaviour
     /// <summary>
     /// Total duration of the video in seconds.
     /// </summary>
-    public double Duration => videoPlayer != null ? videoPlayer.length : 0.0;
+    public double Duration => _videoPlayer != null ? _videoPlayer.length : 0.0;
 
     /// <summary>
     /// Is the video currently playing.
     /// </summary>
-    public bool IsPlaying => videoPlayer != null && videoPlayer.isPlaying;
+    public bool IsPlaying => (_videoPlayer != null && _videoPlayer.isPlaying) || _isRewinding;
 
     /// <summary>
     /// Has the video player successfully prepared the video source.
     /// </summary>
-    public bool IsPrepared => videoPlayer != null && videoPlayer.isPrepared;
+    public bool IsPrepared => _videoPlayer != null && _videoPlayer.isPrepared;
 
     /// <summary>
     /// Direct access to the underlying VideoPlayer component.
     /// </summary>
-    public VideoPlayer VideoPlayer => videoPlayer;
+    public VideoPlayer VideoPlayer => _videoPlayer;
 
     /// <summary>
     /// Fired when the VideoPlayer has finished preparing the video.
@@ -57,30 +97,34 @@ public class VideoPlayerManager : MonoBehaviour
     private double _targetSeekTime = -1.0;
     private bool _seekCompletedEventFired = false;
 
-    private void Awake()
+    public VideoPlayerManager(VideoPlayer player)
     {
-        if (videoPlayer == null)
+        _videoPlayer = player;
+        if (_videoPlayer != null)
         {
-            videoPlayer = GetComponent<VideoPlayer>();
-        }
-
-        if (videoPlayer != null)
-        {
-            videoPlayer.prepareCompleted += OnVideoPlayerPrepared;
-            videoPlayer.seekCompleted += OnVideoSeekCompleted;
-        }
-        else
-        {
-            Debug.LogWarning("VideoPlayerManager: Компонент VideoPlayer не назначен и не найден на этом же GameObject! Пожалуйста, назначьте его в инспекторе.", this);
+            _customPlaybackSpeed = _videoPlayer.playbackSpeed;
         }
     }
 
-    private void OnDestroy()
+    public void Initialize()
     {
-        if (videoPlayer != null)
+        if (_videoPlayer != null)
         {
-            videoPlayer.prepareCompleted -= OnVideoPlayerPrepared;
-            videoPlayer.seekCompleted -= OnVideoSeekCompleted;
+            _videoPlayer.prepareCompleted += OnVideoPlayerPrepared;
+            _videoPlayer.seekCompleted += OnVideoSeekCompleted;
+        }
+        else
+        {
+            Debug.LogWarning("VideoPlayerManager: Компонент VideoPlayer не передан!");
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_videoPlayer != null)
+        {
+            _videoPlayer.prepareCompleted -= OnVideoPlayerPrepared;
+            _videoPlayer.seekCompleted -= OnVideoSeekCompleted;
         }
     }
 
@@ -94,21 +138,36 @@ public class VideoPlayerManager : MonoBehaviour
         _seekCompletedEventFired = true;
     }
 
-    private void Update()
+    public void Update()
     {
-        if (IsSeeking && videoPlayer != null && videoPlayer.isPrepared)
+        if (_isRewinding && _videoPlayer != null && _videoPlayer.isPrepared)
         {
-            // Мы завершаем состояние перемотки только тогда, когда:
-            // 1. Событие seekCompleted было вызвано и время сдвинулось с места начала
-            // ИЛИ 2. Текущее время уже очень близко к цели (в пределах 1 секунды)
-            bool timeHasMoved = Math.Abs(videoPlayer.time - _preSeekTime) > 0.1;
-            bool reachedTarget = Math.Abs(videoPlayer.time - _targetSeekTime) < 1.0;
+            _targetRewindTime -= Time.deltaTime * _rewindSpeed;
+            if (_targetRewindTime <= 0.0)
+            {
+                _targetRewindTime = 0.0;
+                _isRewinding = false;
+                _customPlaybackSpeed = 0f;
+                Pause();
+                Debug.Log("[VideoPlayerManager] Отмотка завершена: достигнуто начало видео.");
+            }
+
+            if (!IsSeeking)
+            {
+                Seek(_targetRewindTime);
+            }
+        }
+
+        if (IsSeeking && _videoPlayer != null && _videoPlayer.isPrepared)
+        {
+            bool timeHasMoved = Math.Abs(_videoPlayer.time - _preSeekTime) > 0.1;
+            bool reachedTarget = Math.Abs(_videoPlayer.time - _targetSeekTime) < 1.0;
 
             if ((_seekCompletedEventFired && timeHasMoved) || reachedTarget)
             {
                 IsSeeking = false;
                 _seekCompletedEventFired = false;
-                if (_wasPlayingBeforeSeek)
+                if (_wasPlayingBeforeSeek && !_isRewinding)
                 {
                     _wasPlayingBeforeSeek = false;
                     Play();
@@ -117,53 +176,45 @@ public class VideoPlayerManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Перепрыгнуть на указанное время в секундах (с возможностью дробной части)
-    /// </summary>
-    /// <param name="timeInSeconds">Время в секундах</param>
     public void JumpToTime(double timeInSeconds)
     {
+        if (_isRewinding)
+        {
+            _targetRewindTime = timeInSeconds;
+        }
         Seek(timeInSeconds);
         Debug.Log($"[VideoPlayerManager] Переход на время: {timeInSeconds} сек.");
     }
 
-    /// <summary>
-    /// Play/resume the video.
-    /// </summary>
     public void Play()
     {
-        if (videoPlayer != null)
+        if (_videoPlayer != null)
         {
-            videoPlayer.Play();
+            _videoPlayer.Play();
         }
     }
 
-    /// <summary>
-    /// Pause the video.
-    /// </summary>
     public void Pause()
     {
-        if (videoPlayer != null)
+        if (_videoPlayer != null)
         {
-            videoPlayer.Pause();
+            _videoPlayer.Pause();
         }
     }
 
-    /// <summary>
-    /// Seek to a specific time in seconds.
-    /// </summary>
     public void Seek(double seconds)
     {
-        if (videoPlayer != null)
+        if (_videoPlayer != null)
         {
             if (!IsSeeking)
             {
                 _wasPlayingBeforeSeek = IsPlaying;
-                _preSeekTime = videoPlayer.time;
+                _preSeekTime = _videoPlayer.time;
             }
             IsSeeking = true;
             _targetSeekTime = seconds;
             _seekCompletedEventFired = false;
+            
             double targetTime = seconds;
             if (Duration > 0.0)
             {
@@ -173,7 +224,30 @@ public class VideoPlayerManager : MonoBehaviour
             {
                 targetTime = Math.Max(0.0, seconds);
             }
-            videoPlayer.time = targetTime;
+            _videoPlayer.time = targetTime;
         }
+    }
+
+    /// <summary>
+    /// Sets the playback speed.
+    /// </summary>
+    public void SetPlaybackSpeed(float speed)
+    {
+        PlaybackSpeed = speed;
+    }
+
+    private void StartRewinding(double speed)
+    {
+        if (_videoPlayer == null) return;
+        _isRewinding = true;
+        _rewindSpeed = speed;
+        _targetRewindTime = _videoPlayer.time;
+        _videoPlayer.Pause();
+        Debug.Log($"[VideoPlayerManager] Начата отмотка назад со скоростью: {speed}x");
+    }
+
+    private void StopRewinding()
+    {
+        _isRewinding = false;
     }
 }
