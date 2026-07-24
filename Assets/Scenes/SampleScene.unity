@@ -232,15 +232,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultLevel: {fileID: 11400000, guid: c712736e700671c42a8152430fc2c99e, type: 2}
+  todaySchedule: {fileID: 0}
+  clientView: {fileID: 0}
+  clientRoot: {fileID: 0}
+  spawnPoint: {fileID: 0}
+  intermediatePoint: {fileID: 0}
+  deskPoint: {fileID: 0}
+  exitPoint: {fileID: 0}
+  clientMovementConfig: {fileID: 0}
   forwardPlayer: {fileID: 1648897818}
   reversePlayer: {fileID: 30849374}
   displayImage: {fileID: 1654372059}
   displayRenderer: {fileID: 0}
   materialTextureProperty: _MainTex
+  dialogueWindow: {fileID: 0}
+  dialogueNameText: {fileID: 0}
+  dialogueMessageText: {fileID: 0}
   timelineView: {fileID: 508648661}
   markerContainer: {fileID: 1665925534}
   markerPrefab: {fileID: 7744247183726881313, guid: 61edad83eed078b47be19b526a71b2e0, type: 3}
   deleteSelectedCutButton: {fileID: 927897809}
+  controlsConfig: {fileID: 0}
+  mainCamera: {fileID: 0}
+  tvCamera: {fileID: 0}
+  clientCamera: {fileID: 0}
+  activeCameraPriority: 10
+  inactiveCameraPriority: 0
 --- !u!1 &186623226
 GameObject:
   m_ObjectHideFlags: 0
@@ -1446,7 +1463,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
+  sharedProfile: {fileID: 11400000, guid: fd12ae06982861c49bc21f280108ac53, type: 2}
 --- !u!4 &832575519
 Transform:
   m_ObjectHideFlags: 0

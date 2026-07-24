@@ -1,0 +1,47 @@
+using Core.Services;
+using UnityEngine;
+
+namespace GamePlay.View
+{
+    public class TV : MonoBehaviour
+    {
+        [SerializeField] private Renderer _renderer;
+
+        private TVRendererService _tvRendererService;
+
+        public TVRendererService TVRendererService => _tvRendererService;
+
+        public void Initialize()
+        {
+            if (_renderer == null)
+            {
+                _renderer = GetComponent<Renderer>();
+            }
+
+            _tvRendererService = new TVRendererService(_renderer);
+            _tvRendererService.Initialize();
+        }
+
+        public void Initialize(TVRendererService tvRendererService)
+        {
+            if (_renderer == null)
+            {
+                _renderer = GetComponent<Renderer>();
+            }
+
+            _tvRendererService = tvRendererService ?? new TVRendererService(_renderer);
+            _tvRendererService.BindRenderer(_renderer);
+            _tvRendererService.Initialize();
+        }
+
+        public void SetScreenMaterial(Material material)
+        {
+            _tvRendererService?.SetScreenMaterial(material);
+        }
+
+        public void ResetToDefaultMaterial()
+        {
+            _tvRendererService?.ResetToDefaultMaterial();
+        }
+    }
+}
