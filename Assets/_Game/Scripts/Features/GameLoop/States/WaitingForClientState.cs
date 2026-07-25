@@ -7,7 +7,7 @@ namespace GamePlay.States.GameLoop
     {
         public void Enter()
         {
-            Debug.Log("[GameLoop] Waiting for next client...");
+            Debug.Log("<color=lightblue>[GameLoop]</color> Waiting for next client...");
         }
 
         public void Exit()

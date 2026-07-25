@@ -1,9 +1,10 @@
 using UnityEngine;
 using System;
+using GamePlay.View;
 
 public class VideoTimelineUILogic : IInitializable, IUpdatable, IDisposableService
 {
-    private readonly VideoTimelineUIView _view;
+    private readonly VideoPlayerControlsUIView _view;
     private readonly VideoPlayerService _playerManager;
     private readonly VideoCutService _cutManager;
 
@@ -13,7 +14,9 @@ public class VideoTimelineUILogic : IInitializable, IUpdatable, IDisposableServi
     private bool _isHoldingForward = false;
     private float _holdStartTime = 0f;
 
-    public VideoTimelineUILogic(VideoTimelineUIView view, VideoPlayerService playerManager, VideoCutService cutManager)
+    public event Action OnFinishEditingClicked;
+
+    public VideoTimelineUILogic(VideoPlayerControlsUIView view, VideoPlayerService playerManager, VideoCutService cutManager)
     {
         _view = view;
         _playerManager = playerManager;
@@ -27,6 +30,8 @@ public class VideoTimelineUILogic : IInitializable, IUpdatable, IDisposableServi
         _view.Initialize();
         _view.OnPlayPauseClicked += HandlePlayPauseClicked;
         _view.OnSetCutIntervalClicked += HandleSetCutIntervalClicked;
+        _view.OnClearAllCutsClicked += HandleClearAllCutsClicked;
+        _view.OnFinishEditingClicked += HandleFinishEditingClicked;
         _view.OnSpeedSliderValueChangedEvent += HandleSpeedSliderValueChanged;
         
         _view.OnRewindPointerDown += HandleRewindPointerDown;
@@ -45,6 +50,8 @@ public class VideoTimelineUILogic : IInitializable, IUpdatable, IDisposableServi
 
         _view.OnPlayPauseClicked -= HandlePlayPauseClicked;
         _view.OnSetCutIntervalClicked -= HandleSetCutIntervalClicked;
+        _view.OnClearAllCutsClicked -= HandleClearAllCutsClicked;
+        _view.OnFinishEditingClicked -= HandleFinishEditingClicked;
         _view.OnSpeedSliderValueChangedEvent -= HandleSpeedSliderValueChanged;
 
         _view.OnRewindPointerDown -= HandleRewindPointerDown;
@@ -169,5 +176,18 @@ public class VideoTimelineUILogic : IInitializable, IUpdatable, IDisposableServi
         {
             _cutManager.ToggleIntervalPoint();
         }
+    }
+
+    private void HandleClearAllCutsClicked()
+    {
+        if (_cutManager != null)
+        {
+            _cutManager.ClearAllCuts();
+        }
+    }
+
+    private void HandleFinishEditingClicked()
+    {
+        OnFinishEditingClicked?.Invoke();
     }
 }

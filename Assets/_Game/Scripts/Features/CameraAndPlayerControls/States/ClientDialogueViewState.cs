@@ -8,14 +8,14 @@ namespace GamePlay.States.PlayerView
     public class ClientDialogueViewState : IState
     {
         private readonly CameraControlService _cameraController;
-        private ClientDataSO _clientData;
+        private ClientDataConfig _clientData;
 
         public ClientDialogueViewState(CameraControlService cameraControlService)
         {
             _cameraController = cameraControlService;
         }
 
-        public void SetClientData(ClientDataSO clientData)
+        public void SetClientData(ClientDataConfig clientData)
         {
             _clientData = clientData;
         }

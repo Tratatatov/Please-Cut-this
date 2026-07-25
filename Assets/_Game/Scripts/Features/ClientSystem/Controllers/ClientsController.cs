@@ -41,15 +41,15 @@ namespace GamePlay.Controllers
         /// </summary>
         /// <param name="clientData">Данные о клиенте (ScriptableObject)</param>
         /// <param name="onArrived">Коллбек, вызываемый по прибытию клиента к стойке</param>
-        public void StartNewClient(ClientDataSO clientData, Action onArrived = null)
+        public void StartNewClient(ClientDataConfig clientData, Action onArrived = null)
         {
             if (clientData == null)
             {
-                Debug.LogWarning("[ClientsController] Попытка запустить нового клиента с null ClientDataSO!");
+                Debug.LogWarning("<color=cyan>[ClientsController]</color> Попытка запустить нового клиента с null ClientDataConfig!");
                 return;
             }
 
-            Debug.Log($"[ClientsController] Запуск нового клиента: {clientData.ClientName} (Тип: {clientData.ModelType})");
+            Debug.Log($"<color=cyan>[ClientsController]</color> Запуск нового клиента: {clientData.ClientName} (Тип: {clientData.ModelType})");
 
             _behaviorController?.MoveToDesk(clientData, onArrived);
         }
@@ -60,7 +60,7 @@ namespace GamePlay.Controllers
         /// <param name="onExited">Коллбек по завершении ухода клиента из комнаты</param>
         public void DismissCurrentClient(Action onExited = null)
         {
-            Debug.Log("[ClientsController] Отправка клиента к выходу...");
+            Debug.Log("<color=cyan>[ClientsController]</color> Отправка клиента к выходу...");
             _behaviorController?.LeaveRoom(onExited);
         }
     }

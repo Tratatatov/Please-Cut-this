@@ -7,7 +7,7 @@ namespace GamePlay.States.GameLoop
     {
         public void Enter()
         {
-            Debug.Log("[GameLoop] Returning tape to client. Mission accomplished.");
+            Debug.Log("<color=lightblue>[GameLoop]</color> Returning tape to client. Mission accomplished.");
         }
 
         public void Exit()

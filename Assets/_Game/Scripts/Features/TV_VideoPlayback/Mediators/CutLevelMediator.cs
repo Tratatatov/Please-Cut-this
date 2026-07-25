@@ -7,7 +7,7 @@ public class CutLevelMediator : IInitializable
     private CutValidationService _cutValidationService;
     private VideoCutVisualizer _videoCutVisualizer;
 
-    public CutLevelData CurrentLevelData { get; private set; }
+    public VideotapeConfig CurrentLevelData { get; private set; }
 
     public void Initialize()
     {
@@ -17,7 +17,7 @@ public class CutLevelMediator : IInitializable
         _videoCutVisualizer = ServiceLocator.Get<VideoCutVisualizer>();
     }
 
-    public void LoadLevel(CutLevelData levelData)
+    public void LoadLevel(VideotapeConfig levelData)
     {
         if (levelData == null)
         {

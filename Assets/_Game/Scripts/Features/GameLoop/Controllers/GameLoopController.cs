@@ -16,18 +16,20 @@ namespace GamePlay.Controllers
         private readonly WorkingOnTapeState _workingState;
         private readonly ReturningTapeState _returningState;
 
-        private DayScheduleSO _currentSchedule;
-        private Queue<ClientDataSO> _clientsQueue;
-        private ClientDataSO _currentClient;
+        private DayScheduleConfig _currentSchedule;
+        private Queue<ClientDataConfig> _clientsQueue;
+        private ClientDataConfig _currentClient;
         private readonly ClientView _clientView;
+        private readonly VideoPlayerControlsUIView _videoPlayerControlsView;
 
-        public GameLoopController(DayScheduleSO initialSchedule = null, ClientView clientView = null)
+        public GameLoopController(DayScheduleConfig initialSchedule = null, ClientView clientView = null, VideoPlayerControlsUIView videoPlayerControlsView = null)
         {
             _stateMachine = new StateMachine();
+            _videoPlayerControlsView = videoPlayerControlsView;
             
             _waitingState = new WaitingForClientState();
             _dialogState = new ClientDialogState();
-            _workingState = new WorkingOnTapeState();
+            _workingState = new WorkingOnTapeState(_videoPlayerControlsView);
             _returningState = new ReturningTapeState();
             
             _currentSchedule = initialSchedule;
@@ -46,10 +48,10 @@ namespace GamePlay.Controllers
             }
         }
 
-        public void LoadSchedule(DayScheduleSO schedule)
+        public void LoadSchedule(DayScheduleConfig schedule)
         {
             _currentSchedule = schedule;
-            _clientsQueue = new Queue<ClientDataSO>(schedule.Clients);
+            _clientsQueue = new Queue<ClientDataConfig>(schedule.Clients);
             _stateMachine.ChangeState(_waitingState);
         }
 
@@ -72,13 +74,13 @@ namespace GamePlay.Controllers
                 if (_clientsQueue != null && _clientsQueue.Count > 0)
                 {
                     _currentClient = _clientsQueue.Dequeue();
-                    Debug.Log($"[GameLoop] Client {_currentClient.ClientName} is arriving.");
+                    Debug.Log($"<color=lightblue>[GameLoop]</color> Client {_currentClient.ClientName} is arriving.");
                     _clientView?.SetClientData(_currentClient);
                     _stateMachine.ChangeState(_dialogState);
                 }
                 else
                 {
-                    Debug.Log("[GameLoop] No more clients for today.");
+                    Debug.Log("<color=lightblue>[GameLoop]</color> No more clients for today.");
                     _clientView?.SetClientData(null);
                 }
             }

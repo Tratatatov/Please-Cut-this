@@ -5,8 +5,8 @@ using UnityEngine.Video;
 /// <summary>
 /// ScriptableObject для хранения настроек и эталонных данных уровня.
 /// </summary>
-[CreateAssetMenu(fileName = "NewCutLevelData", menuName = "Please Cut This/Cut Level Data", order = 1)]
-public class CutLevelData : ScriptableObject
+[CreateAssetMenu(fileName = "VideotapeConfig", menuName = "Please Cut This/Videotape Config", order = 1)]
+public class VideotapeConfig : ScriptableObject
 {
     [Header("Ресурсы")]
     [Tooltip("Видео-клип для этого уровня")]

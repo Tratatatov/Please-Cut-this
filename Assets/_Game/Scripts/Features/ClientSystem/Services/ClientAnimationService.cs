@@ -64,7 +64,7 @@ namespace Core.Services
         {
             if (_animator == null)
             {
-                Debug.LogWarning("[ClientAnimationService] Animator не назначен!");
+                Debug.LogWarning("<color=silver>[ClientAnimationService]</color> Animator не назначен!");
                 return;
             }
 
@@ -82,7 +82,7 @@ namespace Core.Services
         {
             if (_animator == null)
             {
-                Debug.LogWarning("[ClientAnimationService] Animator не назначен!");
+                Debug.LogWarning("<color=silver>[ClientAnimationService]</color> Animator не назначен!");
                 return;
             }
 

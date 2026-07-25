@@ -7,8 +7,12 @@ using Core.Services;
 
 public class GameBootstrapper : MonoBehaviour
 {
+    [Header("Настройки режима игры")]
+    [SerializeField] private bool _useTestGameManager = false;
+    [SerializeField] private GamePlay.Controllers.TestGameManager _testGameManager;
+
     [Header("Расписание дня")]
-    public GamePlay.Data.DayScheduleSO todaySchedule;
+    public GamePlay.Data.DayScheduleConfig todaySchedule;
 
     [Header("Сцена: Клиент")]
     public GamePlay.View.ClientView clientView;
@@ -17,7 +21,7 @@ public class GameBootstrapper : MonoBehaviour
     public Transform intermediatePoint;
     public Transform deskPoint;
     public Transform exitPoint;
-    public GamePlay.Data.ClientMovementConfigSO clientMovementConfig;
+    public GamePlay.Data.ClientMovementConfig clientMovementConfig;
 
     [Header("Сцена: Плееры")]
     [UnityEngine.Serialization.FormerlySerializedAs("videoPlayer")]
@@ -26,6 +30,8 @@ public class GameBootstrapper : MonoBehaviour
 
     [Header("Сцена: Отображение")]
     public GamePlay.View.TV tv;
+    public Material tvOnMaterial;
+    public Material tvReverseOnMaterial;
     public Renderer displayRenderer;
     public string materialTextureProperty = "_MainTex";
 
@@ -34,19 +40,17 @@ public class GameBootstrapper : MonoBehaviour
     public TMPro.TMP_Text dialogueNameText;
     public TMPro.TMP_Text dialogueMessageText;
 
-    [Header("Сцена: UI таймлайна")]
-    public VideoTimelineUIView timelineView;
-    public RectTransform markerContainer;
-    public RectTransform markerPrefab;
-    public Button deleteSelectedCutButton;
+    [Header("Сцена: UI управления видеоплеером")]
+    public GamePlay.View.VideoPlayerControlsUIView videoPlayerControlsView;
 
     [Header("Сцена: Настройки управления")]
-    public GamePlay.Data.GameControlsConfigSO controlsConfig;
+    public GamePlay.Data.GameControlsConfig controlsConfig;
 
     [Header("Сцена: Камеры (Cinemachine)")]
     public CinemachineCamera mainCamera;
     public CinemachineCamera tvCamera;
     public CinemachineCamera clientCamera;
+    public CinemachineCamera cassetteCamera;
     public int activeCameraPriority = 10;
     public int inactiveCameraPriority = 0;
 
@@ -66,21 +70,19 @@ public class GameBootstrapper : MonoBehaviour
 
         // 1. Создание сервисов (обычные классы C#)
         var dialogueService = new DialogueService(dialogueNameText, dialogueMessageText, dialogueWindow);
-        var playerManager = new VideoPlayerService(forwardPlayer, reversePlayer, displayRenderer, materialTextureProperty, tvService);
+        var playerManager = new VideoPlayerService(forwardPlayer, reversePlayer, materialTextureProperty, tvService);
         var cutManager = new VideoCutService();
         var validationService = new CutValidationService();
-        var cutVisualizer = new VideoCutVisualizer(markerContainer, markerPrefab, deleteSelectedCutButton);
+        var cutVisualizer = new VideoCutVisualizer(videoPlayerControlsView);
         var levelMediator = new CutLevelMediator();
-        var timelineLogic = new VideoTimelineUILogic(timelineView, playerManager, cutManager);
-        var cameraControlService = new CameraControlService(mainCamera, tvCamera, clientCamera, activeCameraPriority, inactiveCameraPriority);
+        var timelineLogic = new VideoTimelineUILogic(videoPlayerControlsView, playerManager, cutManager);
+        var cameraControlService = new CameraControlService(mainCamera, tvCamera, clientCamera, cassetteCamera, activeCameraPriority, inactiveCameraPriority);
         var playerViewController = new GamePlay.Controllers.PlayerViewController(cameraControlService, controlsConfig);
         var clientBehaviorController = new GamePlay.Controllers.ClientBehaviorController(clientView, clientRoot, spawnPoint, intermediatePoint, deskPoint, exitPoint, clientMovementConfig);
         var clientsController = new GamePlay.Controllers.ClientsController(clientBehaviorController, clientView);
-        var gameLoopController = new GamePlay.Controllers.GameLoopController(todaySchedule, clientView);
-        var testGameManager = new GamePlay.Controllers.TestGameManager(todaySchedule, clientsController, playerViewController, controlsConfig);
-
         var gameStateManager = new GameStateManager();
-        gameStateManager.RegisterState(new MontageGameState());
+        gameStateManager.RegisterState(new RoomGameState(playerViewController));
+        gameStateManager.RegisterState(new MontageGameState(videoPlayerControlsView, playerViewController));
         gameStateManager.RegisterState(new ClientDialogueGameState());
 
         // 2. Регистрация в Service Locator
@@ -95,9 +97,15 @@ public class GameBootstrapper : MonoBehaviour
         ServiceLocator.Register(playerViewController);
         ServiceLocator.Register(clientBehaviorController);
         ServiceLocator.Register(clientsController);
-        ServiceLocator.Register(gameLoopController);
-        ServiceLocator.Register(testGameManager);
         ServiceLocator.Register(gameStateManager);
+        if (videoPlayerControlsView != null)
+        {
+            ServiceLocator.Register(videoPlayerControlsView);
+        }
+        if (tvService != null)
+        {
+            ServiceLocator.Register(tvService);
+        }
 
         // Добавляем в списки для вызова жизненного цикла
         AddService(dialogueService);
@@ -111,9 +119,36 @@ public class GameBootstrapper : MonoBehaviour
         AddService(playerViewController);
         AddService(clientBehaviorController);
         AddService(clientsController);
-        AddService(gameLoopController);
-        AddService(testGameManager);
         AddService(gameStateManager);
+
+        if (_useTestGameManager)
+        {
+            if (_testGameManager == null)
+            {
+                _testGameManager = GetComponent<GamePlay.Controllers.TestGameManager>();
+            }
+
+            if (_testGameManager != null)
+            {
+                _testGameManager.enabled = true;
+                _testGameManager.Initialize();
+            }
+            else
+            {
+                Debug.LogWarning("<color=lightblue>[GameBootstrapper]</color> _useTestGameManager включен, но компонент TestGameManager не назначен и не найден на объекте!");
+            }
+        }
+        else
+        {
+            if (_testGameManager != null)
+            {
+                _testGameManager.enabled = false;
+            }
+
+            var gameLoopController = new GamePlay.Controllers.GameLoopController(todaySchedule, clientView, videoPlayerControlsView);
+            ServiceLocator.Register(gameLoopController);
+            AddService(gameLoopController);
+        }
 
         if (clientView != null)
         {
@@ -126,8 +161,11 @@ public class GameBootstrapper : MonoBehaviour
             init.Initialize();
         }
 
-        // 4. Установка начального состояния
-        gameStateManager.SwitchState<MontageGameState>();
+        // 4. Установка начального состояния при стандартном запуске
+        if (!_useTestGameManager)
+        {
+            gameStateManager.SwitchState<MontageGameState>();
+        }
     }
 
     private void AddService(object service)

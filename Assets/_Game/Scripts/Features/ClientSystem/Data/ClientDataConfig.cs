@@ -12,8 +12,8 @@ namespace GamePlay.Data
         Monster
     }
 
-    [CreateAssetMenu(fileName = "ClientData", menuName = "Gameplay/Client Data")]
-    public class ClientDataSO : ScriptableObject
+    [CreateAssetMenu(fileName = "ClientDataConfig", menuName = "Gameplay/Client Data Config")]
+    public class ClientDataConfig : ScriptableObject
     {
         [Header("Client Identity")]
         public string ClientName;
@@ -31,7 +31,7 @@ namespace GamePlay.Data
         [TextArea] public string SuccessPhrase;
 
         [Header("Task & Level")]
-        public CutLevelData LevelData;
+        public VideotapeConfig LevelData;
 
         public List<DialoguePhrase> GetPhrases()
         {

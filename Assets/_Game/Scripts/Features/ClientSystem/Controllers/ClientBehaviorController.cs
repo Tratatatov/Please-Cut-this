@@ -15,7 +15,7 @@ namespace GamePlay.Controllers
         private readonly Transform _intermediatePoint;
         private readonly Transform _deskPoint;
         private readonly Transform _exitPoint;
-        private readonly ClientMovementConfigSO _config;
+        private readonly ClientMovementConfig _config;
 
         private readonly Queue<Vector3> _pathQueue;
         private Vector3 _currentWaypoint;
@@ -31,7 +31,7 @@ namespace GamePlay.Controllers
             Transform intermediatePoint,
             Transform deskPoint,
             Transform exitPoint,
-            ClientMovementConfigSO config = null)
+            ClientMovementConfig config = null)
         {
             _clientView = clientView;
             _clientRoot = clientRoot;
@@ -49,7 +49,7 @@ namespace GamePlay.Controllers
             Transform spawnPoint,
             Transform deskPoint,
             Transform exitPoint,
-            ClientMovementConfigSO config = null)
+            ClientMovementConfig config = null)
             : this(clientView, clientRoot, spawnPoint, null, deskPoint, exitPoint, config)
         {
         }
@@ -71,7 +71,7 @@ namespace GamePlay.Controllers
             }
         }
 
-        public void MoveToDesk(ClientDataSO clientData, Action onArrived = null)
+        public void MoveToDesk(ClientDataConfig clientData, Action onArrived = null)
         {
             if (_clientView != null)
             {

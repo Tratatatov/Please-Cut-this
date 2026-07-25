@@ -3,9 +3,15 @@ using UnityEngine;
 namespace GamePlay.Data
 {
     [CreateAssetMenu(fileName = "GameControlsConfig", menuName = "Gameplay/Controls Config")]
-    public class GameControlsConfigSO : ScriptableObject
+    public class GameControlsConfig : ScriptableObject
     {
         [Header("Tape Editing & Controls")]
+        [Tooltip("Клавиша для взаимодействия с кассетой (взять/передать).")]
+        [SerializeField] private KeyCode interactCassetteKey = KeyCode.E;
+
+        [Tooltip("Клавиша для извлечения кассеты.")]
+        [SerializeField] private KeyCode ejectCassetteKey = KeyCode.F;
+
         [Tooltip("Клавиша для завершения работы с кассетой и передачи ее клиенту.")]
         [SerializeField] private KeyCode finishEditingKey = KeyCode.E;
 
@@ -17,6 +23,18 @@ namespace GamePlay.Data
 
         [Tooltip("Клавиша для ухода клиента.")]
         [SerializeField] private KeyCode dismissClientKey = KeyCode.X;
+
+        public KeyCode InteractCassetteKey
+        {
+            get => interactCassetteKey;
+            set => interactCassetteKey = value;
+        }
+
+        public KeyCode EjectCassetteKey
+        {
+            get => ejectCassetteKey;
+            set => ejectCassetteKey = value;
+        }
 
         public KeyCode FinishEditingKey
         {

@@ -62,7 +62,7 @@ namespace GamePlay.View
             }
         }
 
-        public void SetClientData(ClientDataSO clientData)
+        public void SetClientData(ClientDataConfig clientData)
         {
             if (clientData == null)
             {
@@ -109,14 +109,14 @@ namespace GamePlay.View
                     else
                     {
                         _animationService.ClearAnimator();
-                        Debug.LogWarning($"[ClientView] Animator не найден на модели {selectedEntry.modelObject.name}.");
+                        Debug.LogWarning($"<color=grey>[ClientView]</color> Animator не найден на модели {selectedEntry.modelObject.name}.");
                     }
                     return;
                 }
             }
 
             _animationService.ClearAnimator();
-            Debug.LogWarning($"[ClientView] Модели для типа {modelType} не найдены или не назначены.");
+            Debug.LogWarning($"<color=grey>[ClientView]</color> Модели для типа {modelType} не найдены или не назначены.");
         }
 
         public void PlayIdle(float crossFadeDuration = 0.1f)

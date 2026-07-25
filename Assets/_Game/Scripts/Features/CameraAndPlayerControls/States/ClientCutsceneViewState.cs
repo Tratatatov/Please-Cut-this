@@ -25,7 +25,7 @@ namespace GamePlay.States.PlayerView
             _timer = 0f;
             _cameraController?.SwitchToClientCamera(lockCamera: true);
 
-            Debug.Log($"[ClientCutsceneViewState] Запуск моковой сцены/анимации после диалога (длительность: {_duration} сек)...");
+            Debug.Log($"<color=yellow>[ClientCutsceneViewState]</color> Запуск моковой сцены/анимации после диалога (длительность: {_duration} сек)...");
 
             // Запускаем анимацию передачи/взятия кассеты (Take trigger)
             var clientsController = ServiceLocator.Get<ClientsController>();
@@ -41,7 +41,7 @@ namespace GamePlay.States.PlayerView
 
             if (_timer >= _duration)
             {
-                Debug.Log("[ClientCutsceneViewState] Катсцена завершена. Возврат к стандартному управлению камерой.");
+                Debug.Log("<color=yellow>[ClientCutsceneViewState]</color> Катсцена завершена. Возврат к стандартному управлению камерой.");
                 
                 // Возвращаем анимацию в Idle перед завершением
                 var clientsController = ServiceLocator.Get<ClientsController>();

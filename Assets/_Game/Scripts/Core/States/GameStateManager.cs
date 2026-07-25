@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
+using Core.StateMachines;
 using UnityEngine;
 
 public class GameStateManager : IInitializable, IUpdatable
 {
-    private IGameState _currentState;
-    private readonly Dictionary<Type, IGameState> _states = new Dictionary<Type, IGameState>();
+    private IState _currentState;
+    private readonly Dictionary<Type, IState> _states = new Dictionary<Type, IState>();
 
-    public void RegisterState(IGameState state)
+    public IState CurrentState => _currentState;
+
+    public void RegisterState(IState state)
     {
         var type = state.GetType();
         if (!_states.ContainsKey(type))
@@ -16,10 +19,10 @@ public class GameStateManager : IInitializable, IUpdatable
         }
     }
 
-    public void SwitchState<T>() where T : IGameState
+    public void SwitchState<T>() where T : IState
     {
         var type = typeof(T);
-        if (_states.TryGetValue(type, out IGameState nextState))
+        if (_states.TryGetValue(type, out IState nextState))
         {
             if (_currentState != null)
             {

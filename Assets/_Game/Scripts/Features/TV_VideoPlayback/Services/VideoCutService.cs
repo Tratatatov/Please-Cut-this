@@ -19,7 +19,7 @@ public class VideoCutService : IInitializable, IUpdatable
         _videoPlayerManager = ServiceLocator.Get<VideoPlayerService>();
         if (_videoPlayerManager == null)
         {
-            Debug.LogError("VideoCutService: VideoPlayerService не найден в ServiceLocator!");
+            Debug.LogError("<color=orange>[VideoCutService]</color> VideoPlayerService не найден в ServiceLocator!");
         }
     }
 
@@ -38,12 +38,12 @@ public class VideoCutService : IInitializable, IUpdatable
             {
                 if (isRewinding)
                 {
-                    Debug.Log($"Пропуск фрагмента в обратную сторону с {interval.endTime:F2} сек по {interval.startTime:F2} сек.");
+                    Debug.Log($"<color=orange>[VideoCutService]</color> Пропуск фрагмента в обратную сторону с {interval.endTime:F2} сек по {interval.startTime:F2} сек.");
                     _videoPlayerManager.JumpToTime(interval.startTime - skipBufferTime);
                 }
                 else
                 {
-                    Debug.Log($"Пропуск фрагмента с {interval.startTime:F2} сек по {interval.endTime:F2} сек.");
+                    Debug.Log($"<color=orange>[VideoCutService]</color> Пропуск фрагмента с {interval.startTime:F2} сек по {interval.endTime:F2} сек.");
                     _videoPlayerManager.JumpToTime(interval.endTime + skipBufferTime);
                 }
                 break;
@@ -65,7 +65,7 @@ public class VideoCutService : IInitializable, IUpdatable
         {
             _pendingStartTime = time;
             _isWaitingForEnd = true;
-            Debug.Log($"Cat-интервал: задана первая точка на {time:F2} сек. Ожидание второй точки...");
+            Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: задана первая точка на {time:F2} сек. Ожидание второй точки...");
         }
         else
         {
@@ -76,19 +76,19 @@ public class VideoCutService : IInitializable, IUpdatable
             {
                 startTime = time;
                 endTime = _pendingStartTime;
-                Debug.Log($"Cat-интервал: время перепутано ({endTime:F2} < {startTime:F2}), меняем местами.");
+                Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: время перепутано ({endTime:F2} < {startTime:F2}), меняем местами.");
             }
 
             if (startTime == endTime)
             {
-                Debug.LogWarning("Cat-интервал: начало и конец совпадают. Интервал не добавлен.");
+                Debug.LogWarning("<color=orange>[VideoCutService]</color> Cat-интервал: начало и конец совпадают. Интервал не добавлен.");
                 _isWaitingForEnd = false;
                 return;
             }
 
             AddCutInterval(startTime, endTime);
             _isWaitingForEnd = false;
-            Debug.Log($"Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
+            Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
         }
     }
 
@@ -104,7 +104,7 @@ public class VideoCutService : IInitializable, IUpdatable
     {
         _pendingStartTime = time;
         _isWaitingForEnd = true;
-        Debug.Log($"Cat-интервал: задано начало на {time:F2} сек. Ожидание конца интервала...");
+        Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: задано начало на {time:F2} сек. Ожидание конца интервала...");
     }
 
     public void SetIntervalEnd()
@@ -119,7 +119,7 @@ public class VideoCutService : IInitializable, IUpdatable
     {
         if (!_isWaitingForEnd)
         {
-            Debug.LogWarning("Cat-интервал: Сначала необходимо задать начало интервала (SetIntervalStart)!");
+            Debug.LogWarning("<color=orange>[VideoCutService]</color> Cat-интервал: Сначала необходимо задать начало интервала (SetIntervalStart)!");
             return;
         }
 
@@ -130,26 +130,26 @@ public class VideoCutService : IInitializable, IUpdatable
         {
             startTime = time;
             endTime = _pendingStartTime;
-            Debug.Log($"Cat-интервал: время перепутано, меняем местами.");
+            Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: время перепутано, меняем местами.");
         }
 
         if (startTime == endTime)
         {
-            Debug.LogWarning("Cat-интервал: начало и конец совпадают.");
+            Debug.LogWarning("<color=orange>[VideoCutService]</color> Cat-интервал: начало и конец совпадают.");
             _isWaitingForEnd = false;
             return;
         }
 
         AddCutInterval(startTime, endTime);
         _isWaitingForEnd = false;
-        Debug.Log($"Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
+        Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
     }
 
     public void AddCutInterval(double startSeconds, double endSeconds)
     {
         if (startSeconds >= endSeconds)
         {
-            Debug.LogWarning("VideoCutService: Время начала выреза должно быть меньше времени конца!");
+            Debug.LogWarning("<color=orange>[VideoCutService]</color> Время начала выреза должно быть меньше времени конца!");
             return;
         }
         intervalsToSkip.Add(new SkipInterval

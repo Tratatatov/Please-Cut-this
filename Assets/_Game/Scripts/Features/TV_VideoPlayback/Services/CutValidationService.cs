@@ -16,7 +16,7 @@ public class CutValidationService : IInitializable
         _playerCutManager = ServiceLocator.Get<VideoCutService>();
         if (_playerCutManager == null)
         {
-            Debug.LogError("CutValidationService: VideoCutService не найден в ServiceLocator!");
+            Debug.LogError("<color=magenta>[CutValidationService]</color> VideoCutService не найден в ServiceLocator!");
         }
     }
 
@@ -117,6 +117,6 @@ public class CutValidationService : IInitializable
     public void DebugPrintMatchPercentage()
     {
         float score = GetMatchPercentage();
-        Debug.Log($"<color=green>Итоговый счет соответствия: {score:F1}%</color>");
+        Debug.Log($"<color=cyan>Итоговый счет соответствия: {score:F1}%</color>");
     }
 }

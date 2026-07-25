@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace GamePlay.Data
 {
-    [CreateAssetMenu(fileName = "DaySchedule", menuName = "Gameplay/Day Schedule")]
-    public class DayScheduleSO : ScriptableObject
+    [CreateAssetMenu(fileName = "DayScheduleConfig", menuName = "Gameplay/Day Schedule Config")]
+    public class DayScheduleConfig : ScriptableObject
     {
         [Header("Schedule Settings")]
         public float DelayBetweenClients = 3f;
 
         [Header("Clients Queue")]
-        public List<ClientDataSO> Clients;
+        public List<ClientDataConfig> Clients;
     }
 }

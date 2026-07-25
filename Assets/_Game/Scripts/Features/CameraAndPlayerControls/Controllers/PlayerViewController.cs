@@ -13,13 +13,24 @@ namespace GamePlay.Controllers
         private readonly VideoEditingViewState _videoEditingViewState;
         private readonly ClientDialogueViewState _clientDialogueViewState;
         private readonly ClientCutsceneViewState _clientCutsceneViewState;
-        private readonly GameControlsConfigSO _controlsConfig;
+        private readonly CameraControlService _cameraControlService;
+        private readonly GameControlsConfig _controlsConfig;
+
+        private CassetteInsertingViewState _cassetteInsertingViewState;
+        private CassetteEjectingViewState _cassetteEjectingViewState;
 
         public StateMachine StateMachine => _stateMachine;
         public VideoEditingViewState VideoEditingViewState => _videoEditingViewState;
 
-        public PlayerViewController(CameraControlService cameraControlService, GameControlsConfigSO controlsConfig = null)
+        public bool IsControlsLocked =>
+            _stateMachine.CurrentState == _clientDialogueViewState ||
+            _stateMachine.CurrentState == _clientCutsceneViewState ||
+            (_cassetteInsertingViewState != null && _stateMachine.CurrentState == _cassetteInsertingViewState) ||
+            (_cassetteEjectingViewState != null && _stateMachine.CurrentState == _cassetteEjectingViewState);
+
+        public PlayerViewController(CameraControlService cameraControlService, GameControlsConfig controlsConfig = null)
         {
+            _cameraControlService = cameraControlService;
             _stateMachine = new StateMachine();
             _roomViewState = new RoomViewState(cameraControlService);
             _videoEditingViewState = new VideoEditingViewState(cameraControlService);
@@ -49,7 +60,7 @@ namespace GamePlay.Controllers
             _stateMachine.ChangeState(_videoEditingViewState);
         }
 
-        public void SwitchToClientDialogueView(GamePlay.Data.ClientDataSO clientData = null)
+        public void SwitchToClientDialogueView(GamePlay.Data.ClientDataConfig clientData = null)
         {
             _clientDialogueViewState.SetClientData(clientData);
             _stateMachine.ChangeState(_clientDialogueViewState);
@@ -60,18 +71,30 @@ namespace GamePlay.Controllers
             _stateMachine.ChangeState(_clientCutsceneViewState);
         }
 
+        public void SwitchToCassetteInsertingView(System.Action onCompleted = null, float duration = 2.0f)
+        {
+            _cassetteInsertingViewState = new CassetteInsertingViewState(_cameraControlService, onCompleted, duration);
+            _stateMachine.ChangeState(_cassetteInsertingViewState);
+        }
+
+        public void SwitchToCassetteEjectingView(System.Action onCompleted = null, float duration = 2.0f)
+        {
+            _cassetteEjectingViewState = new CassetteEjectingViewState(_cameraControlService, onCompleted, duration);
+            _stateMachine.ChangeState(_cassetteEjectingViewState);
+        }
+
         public void Update()
         {
             _stateMachine.Update();
 
             KeyCode toggleKey = _controlsConfig != null ? _controlsConfig.ToggleCameraKey : KeyCode.Q;
 
-            // Переключение камер по клавише разрешено только вне диалога и вне катсцены
+            // Переключение камер по клавише разрешено только вне диалога, катсцены и анимаций кассеты
             if (Input.GetKeyDown(toggleKey))
             {
-                if (_stateMachine.CurrentState == _clientDialogueViewState || _stateMachine.CurrentState == _clientCutsceneViewState)
+                if (IsControlsLocked)
                 {
-                    Debug.Log($"[PlayerViewController] Переключение камер по {toggleKey} заблокировано во время диалога и катсцены.");
+                    Debug.Log($"<color=lightblue>[PlayerViewController]</color> Переключение камер по {toggleKey} заблокировано во время анимации, диалога или катсцены.");
                     return;
                 }
 
@@ -83,20 +106,32 @@ namespace GamePlay.Controllers
         {
             if (_stateMachine.CurrentState == _clientDialogueViewState)
             {
-                Debug.Log("[PlayerViewController] Диалог завершен. Переход к катсцене/анимации.");
+                Debug.Log("<color=lightblue>[PlayerViewController]</color> Диалог завершен. Переход к катсцене/анимации.");
                 SwitchToClientCutsceneView();
             }
         }
 
         private void ToggleView()
         {
-            if (_stateMachine.CurrentState == _videoEditingViewState)
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            if (gameStateManager != null && gameStateManager.CurrentState is MontageGameState)
             {
-                SwitchToRoomView();
+                gameStateManager.SwitchState<RoomGameState>();
+            }
+            else if (gameStateManager != null)
+            {
+                gameStateManager.SwitchState<MontageGameState>();
             }
             else
             {
-                SwitchToVideoEditingView();
+                if (_stateMachine.CurrentState == _videoEditingViewState)
+                {
+                    SwitchToRoomView();
+                }
+                else
+                {
+                    SwitchToVideoEditingView();
+                }
             }
         }
     }

@@ -7,16 +7,16 @@ namespace GamePlay.States.GameLoop
 {
     public class ClientDialogState : IState
     {
-        private Data.ClientDataSO _clientData;
+        private Data.ClientDataConfig _clientData;
 
-        public void SetClientData(Data.ClientDataSO clientData)
+        public void SetClientData(Data.ClientDataConfig clientData)
         {
             _clientData = clientData;
         }
 
         public void Enter()
         {
-            Debug.Log("[GameLoop] Client arrived! Displaying dialog...");
+            Debug.Log("<color=lightblue>[GameLoop]</color> Client arrived! Displaying dialog...");
             
             var playerViewController = ServiceLocator.Get<PlayerViewController>();
             if (playerViewController != null)
@@ -27,7 +27,7 @@ namespace GamePlay.States.GameLoop
 
         public void Exit()
         {
-            Debug.Log("[GameLoop] Dialog ended.");
+            Debug.Log("<color=lightblue>[GameLoop]</color> Dialog ended.");
 
             var playerViewController = ServiceLocator.Get<PlayerViewController>();
             if (playerViewController != null)

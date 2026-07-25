@@ -4,16 +4,16 @@ using UnityEngine;
 
 public class ClientDialogueGameState : IGameState
 {
-    private readonly ClientDataSO _clientData;
+    private readonly ClientDataConfig _clientData;
 
-    public ClientDialogueGameState(ClientDataSO clientData = null)
+    public ClientDialogueGameState(ClientDataConfig clientData = null)
     {
         _clientData = clientData;
     }
 
     public void Enter()
     {
-        Debug.Log("[GameState] Enter Client Dialogue State");
+        Debug.Log("<color=cyan>[GameState]</color> Enter Client Dialogue State");
         var dialogueService = ServiceLocator.Get<DialogueService>();
         if (dialogueService != null && _clientData != null)
         {
@@ -27,7 +27,7 @@ public class ClientDialogueGameState : IGameState
 
     public void Exit()
     {
-        Debug.Log("[GameState] Exit Client Dialogue State");
+        Debug.Log("<color=cyan>[GameState]</color> Exit Client Dialogue State");
         var dialogueService = ServiceLocator.Get<DialogueService>();
         dialogueService?.StopDialogue();
     }

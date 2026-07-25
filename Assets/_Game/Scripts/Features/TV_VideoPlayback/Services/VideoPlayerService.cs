@@ -20,7 +20,12 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         {
             if (_isReversed && _reversePlayer != null)
             {
-                return Math.Clamp(Duration - _reversePlayer.time, 0.0, Duration);
+                if (_reversePlayer.length > 0)
+                {
+                    double ratio = _reversePlayer.time / _reversePlayer.length;
+                    return Math.Clamp(Duration * (1.0 - ratio), 0.0, Duration);
+                }
+                return 0.0;
             }
             return _forwardPlayer != null ? _forwardPlayer.time : 0.0;
         }
@@ -29,7 +34,14 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             double targetTime = Math.Clamp(value, 0.0, Math.Max(0.0, Duration - 0.05));
             if (_isReversed)
             {
-                if (_reversePlayer != null) _reversePlayer.time = Math.Clamp(Duration - targetTime, 0.0, Math.Max(0.0, Duration - 0.05));
+                if (_reversePlayer != null)
+                {
+                    if (Duration > 0)
+                    {
+                        double ratio = targetTime / Duration;
+                        _reversePlayer.time = Math.Clamp(_reversePlayer.length * (1.0 - ratio), 0.0, Math.Max(0.0, _reversePlayer.length - 0.05));
+                    }
+                }
             }
             else
             {
@@ -59,12 +71,18 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
                 }
                 if (_forwardPlayer != null)
                 {
-                    _forwardPlayer.playbackSpeed = value;
-                    _forwardPlayer.Play();
+                    if (Mathf.Abs(_forwardPlayer.playbackSpeed - value) > 0.01f || speedChangedSignificantly)
+                    {
+                        _forwardPlayer.playbackSpeed = value;
+                    }
+                    if (!_forwardPlayer.isPlaying)
+                    {
+                        _forwardPlayer.Play();
+                    }
                 }
                 if (speedChangedSignificantly)
                 {
-                    Debug.Log($"[VideoPlayerService] Скорость воспроизведения установлена на: {value}x");
+                    Debug.Log($"<color=cyan>[VideoPlayerService]</color> Скорость воспроизведения установлена на: {value}x");
                 }
             }
             else if (value < 0f)
@@ -79,12 +97,19 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
                 if (_reversePlayer != null)
                 {
                     // Play reverse video forward
-                    _reversePlayer.playbackSpeed = -value;
-                    _reversePlayer.Play();
+                    float targetReverseSpeed = -value;
+                    if (Mathf.Abs(_reversePlayer.playbackSpeed - targetReverseSpeed) > 0.01f || speedChangedSignificantly)
+                    {
+                        _reversePlayer.playbackSpeed = targetReverseSpeed;
+                    }
+                    if (!_reversePlayer.isPlaying)
+                    {
+                        _reversePlayer.Play();
+                    }
                 }
                 if (speedChangedSignificantly)
                 {
-                    Debug.Log($"[VideoPlayerService] Начата отмотка назад со скоростью: {-value}x");
+                    Debug.Log($"<color=cyan>[VideoPlayerService]</color> Начата отмотка назад со скоростью: {-value}x");
                 }
             }
             else
@@ -92,7 +117,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
                 Pause();
                 if (prevSpeed != 0f)
                 {
-                    Debug.Log($"[VideoPlayerService] Воспроизведение приостановлено");
+                    Debug.Log($"<color=cyan>[VideoPlayerService]</color> Воспроизведение приостановлено");
                 }
             }
         }
@@ -136,6 +161,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     private VideoPlayer _playerToHideAfterSeek;
     private VideoPlayer _playerToShowAfterSeek;
     private bool _isWaitingForFrame = false;
+    private float _waitingForFrameTimer = 0f;
 
     private int _preparedCount = 0;
     private int _targetPrepareCount = 1;
@@ -143,38 +169,44 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     private RenderTexture _forwardTexture;
     private RenderTexture _reverseTexture;
 
-    private Renderer _displayRenderer;
     private TVRendererService _tvRendererService;
     private string _materialTextureProperty;
 
     public VideoPlayerService(
         VideoPlayer forwardPlayer, 
         VideoPlayer reversePlayer,
-        Renderer displayRenderer = null,
         string materialTextureProperty = "_MainTex",
         TVRendererService tvRendererService = null
     )
     {
         _forwardPlayer = forwardPlayer;
         _reversePlayer = reversePlayer;
-        _displayRenderer = displayRenderer;
         _materialTextureProperty = materialTextureProperty;
         _tvRendererService = tvRendererService;
         
-        Debug.Log($"[VideoPlayerService] Constructor. forwardPlayer: {forwardPlayer}, reversePlayer: {reversePlayer}, displayRenderer: {displayRenderer}, tvRendererService: {tvRendererService}");
+        Debug.Log($"<color=cyan>[VideoPlayerService]</color> Constructor. forwardPlayer: {forwardPlayer}, reversePlayer: {reversePlayer}, tvRendererService: {tvRendererService}");
         if (forwardPlayer != null)
         {
-            Debug.Log($"[VideoPlayerService] forwardPlayer name: {forwardPlayer.gameObject.name}, renderMode: {forwardPlayer.renderMode}, targetTexture: {forwardPlayer.targetTexture}");
+            Debug.Log($"<color=cyan>[VideoPlayerService]</color> forwardPlayer name: {forwardPlayer.gameObject.name}, renderMode: {forwardPlayer.renderMode}, targetTexture: {forwardPlayer.targetTexture}");
         }
         if (reversePlayer != null)
         {
-            Debug.Log($"[VideoPlayerService] reversePlayer name: {reversePlayer.gameObject.name}, renderMode: {reversePlayer.renderMode}, targetTexture: {reversePlayer.targetTexture}");
+            Debug.Log($"<color=cyan>[VideoPlayerService]</color> reversePlayer name: {reversePlayer.gameObject.name}, renderMode: {reversePlayer.renderMode}, targetTexture: {reversePlayer.targetTexture}");
         }
 
         if (_forwardPlayer != null)
         {
             _customPlaybackSpeed = _forwardPlayer.playbackSpeed;
             _forwardTexture = _forwardPlayer.targetTexture;
+
+            if (_forwardTexture == null)
+            {
+                _forwardTexture = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32);
+                _forwardTexture.name = "Dynamic_TV_RenderTexture";
+                _forwardTexture.Create();
+                _forwardPlayer.targetTexture = _forwardTexture;
+                Debug.Log("<color=cyan>[VideoPlayerService]</color> targetTexture не был назначен в Inspector. Автоматически создана динамическая RenderTexture (1920x1080).");
+            }
         }
         if (_reversePlayer != null)
         {
@@ -182,8 +214,15 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             if (_reverseTexture == null && _forwardTexture != null)
             {
                 _reverseTexture = _forwardTexture;
+                _reversePlayer.targetTexture = _reverseTexture;
             }
             SetupReversePlayer();
+        }
+
+        if (_tvRendererService != null)
+        {
+            if (_forwardTexture != null) _tvRendererService.SetTextureForRenderer(_forwardTexture, _materialTextureProperty, false);
+            if (_reverseTexture != null && _reverseTexture != _forwardTexture) _tvRendererService.SetTextureForRenderer(_reverseTexture, _materialTextureProperty, true);
         }
 
         // Explicitly set initial states
@@ -191,9 +230,25 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         SetPlayerVisibility(_reversePlayer, false);
     }
 
+    public VideoPlayerService(
+        VideoPlayer forwardPlayer, 
+        VideoPlayer reversePlayer,
+        Renderer displayRenderer,
+        string materialTextureProperty,
+        TVRendererService tvRendererService
+    ) : this(forwardPlayer, reversePlayer, materialTextureProperty, tvRendererService ?? (displayRenderer != null ? new TVRendererService(displayRenderer) : null))
+    {
+    }
+
     public void BindTVRendererService(TVRendererService tvRendererService)
     {
         _tvRendererService = tvRendererService;
+        if (_tvRendererService != null)
+        {
+            if (_forwardTexture != null) _tvRendererService.SetTextureForRenderer(_forwardTexture, _materialTextureProperty, false);
+            if (_reverseTexture != null && _reverseTexture != _forwardTexture) _tvRendererService.SetTextureForRenderer(_reverseTexture, _materialTextureProperty, true);
+        }
+        RefreshDisplayTexture();
     }
 
     private void SetupReversePlayer()
@@ -216,7 +271,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     private void SetPlayerVisibility(VideoPlayer vp, bool visible)
     {
         if (vp == null) return;
-        Debug.Log($"[VideoPlayerService] SetPlayerVisibility for {vp.gameObject.name} to {visible}");
+        Debug.Log($"<color=cyan>[VideoPlayerService]</color> SetPlayerVisibility for {vp.gameObject.name} to {visible}");
         if (vp.renderMode == VideoRenderMode.CameraNearPlane || vp.renderMode == VideoRenderMode.CameraFarPlane)
         {
             vp.targetCameraAlpha = visible ? 1f : 0f;
@@ -229,49 +284,92 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             if (isSharedTexture)
             {
                 vp.targetTexture = visible ? target : null;
-                Debug.Log($"[VideoPlayerService] Set {vp.gameObject.name} targetTexture (shared) to {(vp.targetTexture != null ? vp.targetTexture.name : "null")}");
+                Debug.Log($"<color=cyan>[VideoPlayerService]</color> Set {vp.gameObject.name} targetTexture (shared) to {(vp.targetTexture != null ? vp.targetTexture.name : "null")}");
             }
             else
             {
                 if (vp.targetTexture != target)
                 {
                     vp.targetTexture = target;
-                    Debug.Log($"[VideoPlayerService] Set {vp.gameObject.name} targetTexture (separate) to {(target != null ? target.name : "null")}");
+                    Debug.Log($"<color=cyan>[VideoPlayerService]</color> Set {vp.gameObject.name} targetTexture (separate) to {(target != null ? target.name : "null")}");
                 }
             }
 
             if (visible && target != null)
             {
-                UpdateDisplayTexture(target);
+                bool isReversedPlayer = (vp == _reversePlayer);
+                UpdateDisplayTexture(target, isReversedPlayer);
             }
         }
-        vp.SetDirectAudioVolume(0, visible ? 1f : 0f);
+        SetPlayerAudioState(vp, visible);
     }
 
-    private void UpdateDisplayTexture(RenderTexture texture)
+    private void SetPlayerAudioState(VideoPlayer vp, bool active)
+    {
+        if (vp == null) return;
+        if (vp.audioOutputMode == VideoAudioOutputMode.AudioSource && vp.GetTargetAudioSource(0) != null)
+        {
+            vp.GetTargetAudioSource(0).mute = !active;
+            vp.GetTargetAudioSource(0).volume = active ? 1f : 0f;
+        }
+        else
+        {
+            ushort trackCount = (vp.audioTrackCount > 0) ? vp.audioTrackCount : (ushort)1;
+            for (ushort i = 0; i < trackCount; i++)
+            {
+                vp.SetDirectAudioMute(i, !active);
+                vp.SetDirectAudioVolume(i, active ? 1f : 0f);
+            }
+        }
+    }
+
+    public void RefreshDisplayTexture()
+    {
+        RenderTexture activeTexture = _isReversed ? _reverseTexture : _forwardTexture;
+        if (activeTexture == null) activeTexture = _forwardTexture;
+        if (activeTexture != null)
+        {
+            UpdateDisplayTexture(activeTexture, _isReversed);
+        }
+    }
+
+    private void UpdateDisplayTexture(RenderTexture texture, bool isReversed)
     {
         if (texture == null) return;
-        Debug.Log($"[VideoPlayerService] UpdateDisplayTexture to {texture.name}");
-        if (_tvRendererService != null)
-        {
-            _tvRendererService.SetScreenTexture(texture, _materialTextureProperty);
-        }
-        else if (_displayRenderer != null)
-        {
-            _displayRenderer.material.SetTexture(_materialTextureProperty, texture);
-        }
+        Debug.Log($"<color=cyan>[VideoPlayerService]</color> UpdateDisplayTexture to {texture.name}, isReversed: {isReversed}");
+        _tvRendererService?.SetScreenTexture(texture, _materialTextureProperty, isReversed);
     }
 
     private void SwitchToForwardPlayer()
     {
         if (_reversePlayer != null && _forwardPlayer != null)
         {
+            Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> SwitchToForwardPlayer: переключение с {_reversePlayer.gameObject.name} на {_forwardPlayer.gameObject.name}");
             _reversePlayer.Pause();
+            SetPlayerAudioState(_reversePlayer, false);
+            SetPlayerAudioState(_forwardPlayer, true);
+
+            if (_forwardPlayer.renderMode == VideoRenderMode.RenderTexture && _forwardPlayer.targetTexture == null && _forwardTexture != null)
+            {
+                Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> Назначение targetTexture ({_forwardTexture.name}) для {_forwardPlayer.gameObject.name} перед сменой времени.");
+                _forwardPlayer.targetTexture = _forwardTexture;
+            }
+
             _playerToHideAfterSeek = _reversePlayer;
             _playerToShowAfterSeek = _forwardPlayer;
             _isWaitingForFrame = true;
+            _waitingForFrameTimer = 0f;
 
-            _forwardPlayer.time = Math.Clamp(Duration - _reversePlayer.time, 0.0, Math.Max(0.0, Duration - 0.05));
+            if (_reversePlayer.length > 0)
+            {
+                double ratio = _reversePlayer.time / _reversePlayer.length;
+                _forwardPlayer.time = Math.Clamp(Duration * (1.0 - ratio), 0.0, Math.Max(0.0, Duration - 0.05));
+            }
+            else
+            {
+                _forwardPlayer.time = 0.0;
+            }
+            Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> Установлено время для forward плеера: {_forwardPlayer.time}, ожидание OnFrameReady...");
         }
     }
 
@@ -279,12 +377,32 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     {
         if (_forwardPlayer != null && _reversePlayer != null)
         {
+            Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> SwitchToReversePlayer: переключение с {_forwardPlayer.gameObject.name} на {_reversePlayer.gameObject.name}");
             _forwardPlayer.Pause();
+            SetPlayerAudioState(_forwardPlayer, false);
+            SetPlayerAudioState(_reversePlayer, true);
+
+            if (_reversePlayer.renderMode == VideoRenderMode.RenderTexture && _reversePlayer.targetTexture == null && _reverseTexture != null)
+            {
+                Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> Назначение targetTexture ({_reverseTexture.name}) для {_reversePlayer.gameObject.name} перед сменой времени.");
+                _reversePlayer.targetTexture = _reverseTexture;
+            }
+
             _playerToHideAfterSeek = _forwardPlayer;
             _playerToShowAfterSeek = _reversePlayer;
             _isWaitingForFrame = true;
+            _waitingForFrameTimer = 0f;
 
-            _reversePlayer.time = Math.Clamp(Duration - _forwardPlayer.time, 0.0, Math.Max(0.0, Duration - 0.05));
+            if (Duration > 0)
+            {
+                double ratio = _forwardPlayer.time / Duration;
+                _reversePlayer.time = Math.Clamp(_reversePlayer.length * (1.0 - ratio), 0.0, Math.Max(0.0, _reversePlayer.length - 0.05));
+            }
+            else
+            {
+                _reversePlayer.time = 0.0;
+            }
+            Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> Установлено время для reverse плеера: {_reversePlayer.time}, ожидание OnFrameReady...");
         }
     }
 
@@ -295,6 +413,8 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
         if (_forwardPlayer != null)
         {
+            _forwardPlayer.Stop();
+            _forwardPlayer.playOnAwake = false;
             _forwardPlayer.clip = forwardClip;
             _targetPrepareCount++;
             _forwardPlayer.Prepare();
@@ -302,6 +422,8 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
         if (_reversePlayer != null)
         {
+            _reversePlayer.Stop();
+            _reversePlayer.playOnAwake = false;
             if (reverseClip != null)
             {
                 _reversePlayer.clip = reverseClip;
@@ -310,7 +432,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             }
             else
             {
-                Debug.LogWarning("[VideoPlayerService] Reverse clip is not assigned for this level!");
+                Debug.LogWarning("<color=cyan>[VideoPlayerService]</color> Reverse clip is not assigned for this level!");
             }
         }
     }
@@ -352,9 +474,24 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     private void OnVideoPlayerPrepared(VideoPlayer source)
     {
         _preparedCount++;
+        Debug.Log($"<color=cyan>[VideoPlayerService]</color> Плеер готов: {source.gameObject.name} ({_preparedCount}/{_targetPrepareCount})");
+
+        if (source == _reversePlayer)
+        {
+            _reversePlayer.Pause();
+            SetPlayerAudioState(_reversePlayer, false);
+            SetPlayerVisibility(_reversePlayer, false);
+        }
+        else if (source == _forwardPlayer && _customPlaybackSpeed == 0f)
+        {
+            _forwardPlayer.Pause();
+        }
+
         if (_preparedCount >= _targetPrepareCount)
         {
             if (_forwardPlayer != null) _forwardPlayer.time = 0;
+            if (_reversePlayer != null) _reversePlayer.time = 0;
+            RefreshDisplayTexture();
             OnPrepared?.Invoke();
         }
     }
@@ -371,6 +508,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     {
         if (_isWaitingForFrame && _playerToShowAfterSeek != null && source == _playerToShowAfterSeek)
         {
+            Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> OnFrameReady успешно сработал для {source.gameObject.name} (кадр: {frameIdx}). Вызываем SetPlayerVisibility.");
             VideoPlayer toShow = _playerToShowAfterSeek;
             VideoPlayer toHide = _playerToHideAfterSeek;
 
@@ -388,6 +526,26 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
     public void Update()
     {
+        if (_isWaitingForFrame && _playerToShowAfterSeek != null)
+        {
+            _waitingForFrameTimer += Time.unscaledDeltaTime;
+            if (_waitingForFrameTimer > 0.15f)
+            {
+                Debug.LogWarning($"<color=cyan>[TEST VideoPlayerService WARNING]</color> OnFrameReady не сработал за 0.15 сек для {_playerToShowAfterSeek.gameObject.name}! Принудительно переключаем видимость (SetPlayerVisibility).");
+                VideoPlayer toShow = _playerToShowAfterSeek;
+                VideoPlayer toHide = _playerToHideAfterSeek;
+
+                _isWaitingForFrame = false;
+                _playerToShowAfterSeek = null;
+                _playerToHideAfterSeek = null;
+
+                SetPlayerVisibility(toShow, true);
+                if (toHide != null)
+                {
+                    SetPlayerVisibility(toHide, false);
+                }
+            }
+        }
         if (_isReversed && _reversePlayer != null && _reversePlayer.isPrepared)
         {
             if (_reversePlayer.time >= _reversePlayer.length - 0.05)
@@ -397,7 +555,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
                 _customPlaybackSpeed = 0f;
                 SwitchToForwardPlayer();
                 Pause();
-                Debug.Log("[VideoPlayerService] Отмотка завершена: достигнуто начало видео.");
+                Debug.Log("<color=cyan>[VideoPlayerService]</color> Отмотка завершена: достигнуто начало видео.");
             }
         }
 
@@ -425,18 +583,18 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     public void JumpToTime(double timeInSeconds)
     {
         Seek(timeInSeconds);
-        Debug.Log($"[VideoPlayerService] Переход на время: {timeInSeconds} сек.");
+        Debug.Log($"<color=cyan>[VideoPlayerService]</color> Переход на время: {timeInSeconds} сек.");
     }
 
     public void Play()
     {
         if (_isReversed)
         {
-            if (_reversePlayer != null) _reversePlayer.Play();
+            if (_reversePlayer != null && !_reversePlayer.isPlaying) _reversePlayer.Play();
         }
         else
         {
-            if (_forwardPlayer != null) _forwardPlayer.Play();
+            if (_forwardPlayer != null && !_forwardPlayer.isPlaying) _forwardPlayer.Play();
         }
     }
 
@@ -457,7 +615,27 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
                 _preSeekTime = activePlayer.time;
             }
             IsSeeking = true;
-            _targetSeekTime = _isReversed ? Duration - seconds : seconds;
+            
+            double targetTimeForSeeking = seconds;
+            if (Duration > 0.0)
+            {
+                targetTimeForSeeking = Math.Clamp(seconds, 0.0, Duration);
+            }
+            else
+            {
+                targetTimeForSeeking = Math.Max(0.0, seconds);
+            }
+            
+            if (_isReversed && Duration > 0)
+            {
+                double ratio = targetTimeForSeeking / Duration;
+                _targetSeekTime = _reversePlayer.length * (1.0 - ratio);
+            }
+            else
+            {
+                _targetSeekTime = targetTimeForSeeking;
+            }
+            
             _seekCompletedEventFired = false;
 
             double targetTime = seconds;

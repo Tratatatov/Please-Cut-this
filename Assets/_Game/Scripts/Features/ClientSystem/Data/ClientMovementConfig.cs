@@ -3,7 +3,7 @@ using UnityEngine;
 namespace GamePlay.Data
 {
     [CreateAssetMenu(fileName = "ClientMovementConfig", menuName = "Gameplay/Client Movement Config")]
-    public class ClientMovementConfigSO : ScriptableObject
+    public class ClientMovementConfig : ScriptableObject
     {
         [Header("Скорость перемещения")]
         [Tooltip("Скорость ходьбы клиента в юнитах/сек")]

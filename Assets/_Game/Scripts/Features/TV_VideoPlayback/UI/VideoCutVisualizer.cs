@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GamePlay.View;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +14,16 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
 
     private List<GameObject> _spawnedMarkers = new List<GameObject>();
     private CutMarkerInteractable _selectedMarker;
+
+    public VideoCutVisualizer(VideoPlayerControlsUIView controlsView)
+    {
+        if (controlsView != null)
+        {
+            _containerRect = controlsView.markerContainer;
+            _cutMarkerPrefab = controlsView.markerPrefab;
+            _deleteSelectedCutButton = controlsView.deleteSelectedCutButton;
+        }
+    }
 
     public VideoCutVisualizer(RectTransform container, RectTransform prefab, Button deleteButton)
     {

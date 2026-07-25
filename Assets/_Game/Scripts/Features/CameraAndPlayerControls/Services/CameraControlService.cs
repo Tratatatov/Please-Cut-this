@@ -8,6 +8,7 @@ namespace Core.Services
         private readonly CinemachineCamera _mainCamera;
         private readonly CinemachineCamera _tvCamera;
         private readonly CinemachineCamera _clientCamera;
+        private readonly CinemachineCamera _cassetteCamera;
 
         private readonly int _activePriority;
         private readonly int _inactivePriority;
@@ -15,6 +16,7 @@ namespace Core.Services
         public CinemachineCamera MainCamera => _mainCamera;
         public CinemachineCamera TVCamera => _tvCamera;
         public CinemachineCamera ClientCamera => _clientCamera;
+        public CinemachineCamera CassetteCamera => _cassetteCamera;
         public CinemachineCamera ActiveCamera { get; private set; }
 
         public bool IsLocked { get; private set; }
@@ -23,12 +25,14 @@ namespace Core.Services
             CinemachineCamera mainCamera, 
             CinemachineCamera tvCamera, 
             CinemachineCamera clientCamera, 
+            CinemachineCamera cassetteCamera, 
             int activePriority = 10, 
             int inactivePriority = 0)
         {
             _mainCamera = mainCamera;
             _tvCamera = tvCamera;
             _clientCamera = clientCamera;
+            _cassetteCamera = cassetteCamera;
             _activePriority = activePriority;
             _inactivePriority = inactivePriority;
         }
@@ -45,17 +49,27 @@ namespace Core.Services
         /// <summary>
         /// Переключает на главную камеру (MainCamera), если переключение не заблокировано.
         /// </summary>
-        public void SwitchToMainCamera()
+        /// <param name="lockCamera">Если true, блокирует возможность переключения на другие камеры до вызова UnlockCamera</param>
+        public void SwitchToMainCamera(bool lockCamera = false)
         {
+            IsLocked = false;
             SwitchToCamera(_mainCamera);
+            IsLocked = lockCamera;
         }
 
         /// <summary>
         /// Переключает на телевизионную камеру/камеру монтажа (TVCamera), если переключение не заблокировано.
         /// </summary>
-        public void SwitchToTVCamera()
+        /// <param name="lockCamera">Если true, блокирует возможность переключения на другие камеры до вызова UnlockCamera</param>
+        public void SwitchToTVCamera(bool lockCamera = false)
         {
+            IsLocked = false;
             SwitchToCamera(_tvCamera);
+            IsLocked = lockCamera;
+            if (lockCamera)
+            {
+                Debug.Log("<color=lightblue>[CameraControlService]</color> Камера заблокирована на TVCamera.");
+            }
         }
 
         /// <summary>
@@ -70,7 +84,22 @@ namespace Core.Services
             IsLocked = lockCamera;
             if (lockCamera)
             {
-                Debug.Log("[CameraControlService] Камера заблокирована на ClientCamera на время диалога.");
+                Debug.Log("<color=lightblue>[CameraControlService]</color> Камера заблокирована на ClientCamera на время диалога.");
+            }
+        }
+
+        /// <summary>
+        /// Переключает на камеру анимации кассеты (CassetteCamera).
+        /// </summary>
+        /// <param name="lockCamera">Если true, блокирует возможность переключения на другие камеры до вызова UnlockCamera</param>
+        public void SwitchToCassetteCamera(bool lockCamera = true)
+        {
+            IsLocked = false;
+            SwitchToCamera(_cassetteCamera);
+            IsLocked = lockCamera;
+            if (lockCamera)
+            {
+                Debug.Log("<color=lightblue>[CameraControlService]</color> Камера заблокирована на CassetteCamera.");
             }
         }
 
@@ -80,7 +109,7 @@ namespace Core.Services
         public void UnlockCamera()
         {
             IsLocked = false;
-            Debug.Log("[CameraControlService] Блокировка переключения камер снята.");
+            Debug.Log("<color=lightblue>[CameraControlService]</color> Блокировка переключения камер снята.");
         }
 
         // Алиасы для обратной совместимости
@@ -105,8 +134,11 @@ namespace Core.Services
                 case 2:
                     SwitchToClientCamera(false);
                     break;
+                case 3:
+                    SwitchToCassetteCamera(false);
+                    break;
                 default:
-                    Debug.LogWarning($"[CameraControlService] Неверный индекс камеры: {index}. Ожидается 0, 1 или 2.");
+                    Debug.LogWarning($"<color=lightblue>[CameraControlService]</color> Неверный индекс камеры: {index}. Ожидается 0, 1, 2 или 3.");
                     break;
             }
         }
@@ -118,19 +150,20 @@ namespace Core.Services
         {
             if (IsLocked)
             {
-                Debug.LogWarning($"[CameraControlService] Нельзя переключить камеру: заблокировано на время диалога (активна {ActiveCamera?.name}).");
+                Debug.LogWarning($"<color=lightblue>[CameraControlService]</color> Нельзя переключить камеру: заблокировано на время диалога (активна {ActiveCamera?.name}).");
                 return;
             }
 
             if (targetCamera == null)
             {
-                Debug.LogWarning("[CameraControlService] Целевая камера не задана (null)!");
+                Debug.LogWarning("<color=lightblue>[CameraControlService]</color> Целевая камера не задана (null)!");
                 return;
             }
 
             SetCameraPriority(_mainCamera, targetCamera == _mainCamera);
             SetCameraPriority(_tvCamera, targetCamera == _tvCamera);
             SetCameraPriority(_clientCamera, targetCamera == _clientCamera);
+            SetCameraPriority(_cassetteCamera, targetCamera == _cassetteCamera);
 
             ActiveCamera = targetCamera;
         }

@@ -1,6 +1,5 @@
-public interface IGameState
+using Core.StateMachines;
+
+public interface IGameState : IState
 {
-    void Enter();
-    void Update();
-    void Exit();
 }

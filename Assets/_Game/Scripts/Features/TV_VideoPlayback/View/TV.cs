@@ -1,4 +1,4 @@
-using Core.Services;
+/*  */using Core.Services;
 using UnityEngine;
 
 namespace GamePlay.View
@@ -6,6 +6,8 @@ namespace GamePlay.View
     public class TV : MonoBehaviour
     {
         [SerializeField] private Renderer _renderer;
+        [SerializeField] private Renderer _reverseRenderer;
+        [SerializeField] private Renderer _offRenderer;
 
         private TVRendererService _tvRendererService;
 
@@ -18,7 +20,7 @@ namespace GamePlay.View
                 _renderer = GetComponent<Renderer>();
             }
 
-            _tvRendererService = new TVRendererService(_renderer);
+            _tvRendererService = new TVRendererService(_renderer, _reverseRenderer, _offRenderer);
             _tvRendererService.Initialize();
         }
 
@@ -29,14 +31,14 @@ namespace GamePlay.View
                 _renderer = GetComponent<Renderer>();
             }
 
-            _tvRendererService = tvRendererService ?? new TVRendererService(_renderer);
-            _tvRendererService.BindRenderer(_renderer);
+            _tvRendererService = tvRendererService ?? new TVRendererService(_renderer, _reverseRenderer, _offRenderer);
+            _tvRendererService.BindRenderer(_renderer, _reverseRenderer, _offRenderer);
             _tvRendererService.Initialize();
         }
 
-        public void SetScreenMaterial(Material material)
+        public void SetScreenMaterial(Material material, Material reverseMaterial = null)
         {
-            _tvRendererService?.SetScreenMaterial(material);
+            _tvRendererService?.SetScreenMaterial(material, reverseMaterial);
         }
 
         public void ResetToDefaultMaterial()

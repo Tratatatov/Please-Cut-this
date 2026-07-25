@@ -61,11 +61,11 @@ namespace Core.Services
             SetWindowActive(false);
         }
 
-        public void PlayDialogue(ClientDataSO clientData)
+        public void PlayDialogue(ClientDataConfig clientData)
         {
             if (clientData == null)
             {
-                Debug.LogWarning("[DialogueService] Cannot play dialogue: clientData is null.");
+                Debug.LogWarning("<color=white>[DialogueService]</color> Cannot play dialogue: clientData is null.");
                 return;
             }
 
@@ -80,7 +80,7 @@ namespace Core.Services
         {
             if (phrases == null || phrases.Count == 0)
             {
-                Debug.LogWarning("[DialogueService] Cannot play dialogue: phrases list is empty.");
+                Debug.LogWarning("<color=white>[DialogueService]</color> Cannot play dialogue: phrases list is empty.");
                 return;
             }
 
@@ -101,7 +101,7 @@ namespace Core.Services
         {
             if (phrases == null || phrases.Count == 0)
             {
-                Debug.LogWarning("[DialogueService] Cannot play dialogue: phrases list is empty.");
+                Debug.LogWarning("<color=white>[DialogueService]</color> Cannot play dialogue: phrases list is empty.");
                 return;
             }
 
