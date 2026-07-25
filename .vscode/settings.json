@@ -67,6 +67,9 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Please, Cut this.sln",
-    "dotnet.enableWorkspaceBasedDevelopment": false
+    "dotnet.defaultSolution": "Please Cut this.sln",
+    "dotnet.enableWorkspaceBasedDevelopment": false,
+    "dotrush.roslyn.projectOrSolutionFiles": [
+        "d:\\Projects\\Unity\\Please Cut this\\Please Cut this.sln"
+    ]
 }
