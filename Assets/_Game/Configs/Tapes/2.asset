@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 90b0caf8c780dea42a1fbb1c95888cd8, type: 3}
   m_Name: 2
   m_EditorClassIdentifier: 
-  videoClip: {fileID: 32900000, guid: 84a97d6a0ec35ea4fa6bb4b586beb977, type: 3}
+  videoClip: {fileID: 32900000, guid: 1cadfa17cc632314883b47c4db001f9b, type: 3}
   reverseVideoClip: {fileID: 32900000, guid: 95f94cea76542c441a097261a28e72b1, type: 3}
   targetIntervals:
   - startTime: 5

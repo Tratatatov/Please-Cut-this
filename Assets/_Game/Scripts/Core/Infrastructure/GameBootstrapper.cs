@@ -126,8 +126,8 @@ public class GameBootstrapper : MonoBehaviour
         GamePlay.Data.DayScheduleConfig schedule = todaySchedule;
         VideotapeConfig debugTape = null;
         TV tvComp = tv;
-        Material tvOnMat = null;
-        Material tvRevMat = null;
+        Material tvOnMat = tvOnMaterial;
+        Material tvRevMat = tvReverseOnMaterial;
         GameControlsConfig ctrlCfg = controlsConfig;
         bool isDebugMode = false;
 
@@ -142,8 +142,8 @@ public class GameBootstrapper : MonoBehaviour
             if (schedule == null) schedule = _gameManager.Schedule;
             debugTape = _gameManager.DebugVideotapeConfig;
             if (tvComp == null) tvComp = _gameManager.Tv;
-            tvOnMat = _gameManager.TvOnMaterial;
-            tvRevMat = _gameManager.TvReverseOnMaterial;
+            if (tvOnMat == null) tvOnMat = _gameManager.TvOnMaterial;
+            if (tvRevMat == null) tvRevMat = _gameManager.TvReverseOnMaterial;
             if (ctrlCfg == null) ctrlCfg = _gameManager.ControlsConfig;
             isDebugMode = _gameManager.IsDebugMode;
         }

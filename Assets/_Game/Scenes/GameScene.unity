@@ -7404,7 +7404,7 @@ MonoBehaviour:
   _tvReverseOnMaterial: {fileID: 2100000, guid: e3521a3a85e87414694aefcb83bdf043, type: 2}
   _isDebugMode: 0
   _timeScale: 1
-  _debugVideotapeConfig: {fileID: 0}
+  _debugVideotapeConfig: {fileID: 11400000, guid: c712736e700671c42a8152430fc2c99e, type: 2}
 --- !u!1 &1391817911
 GameObject:
   m_ObjectHideFlags: 0
@@ -10479,13 +10479,29 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 503123278}
     - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
+      propertyPath: rewindHoldSpeed
+      value: -2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
+      propertyPath: forwardHoldSpeed
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
       propertyPath: rewindBackButton
       value: 
       objectReference: {fileID: 403620058}
     - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
+      propertyPath: rewindStartSpeed
+      value: -2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
       propertyPath: changeSpeedButton
       value: 
       objectReference: {fileID: 442383935}
+    - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
+      propertyPath: forwardStartSpeed
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
       propertyPath: clearAllCutsButton
       value: 
@@ -10500,7 +10516,7 @@ PrefabInstance:
       objectReference: {fileID: 1076847214}
     - target: {fileID: 4336494146138542017, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
       propertyPath: enableHoldAcceleration
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9196726335714008518, guid: c520097a9980caf48a6042ebeec3f4cd, type: 3}
       propertyPath: m_LocalPosition.x

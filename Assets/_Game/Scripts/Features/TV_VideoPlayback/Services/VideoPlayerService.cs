@@ -289,33 +289,22 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         }
     }
 
-    /// <summary>
-    /// Включает GameObject для прямого плеера (Forward) и при необходимости отключает реверсный.
-    /// </summary>
     public void EnableForwardPlayer()
     {
         if (_forwardPlayer != null)
         {
             SetPlayerGameObjectActive(_forwardPlayer, true);
         }
-        if (_reversePlayer != null && _forwardPlayer != null && _reversePlayer.gameObject != _forwardPlayer.gameObject)
-        {
-            SetPlayerGameObjectActive(_reversePlayer, false);
-        }
     }
 
     /// <summary>
-    /// Включает GameObject для реверсного плеера (Reverse) и при необходимости отключает прямой.
+    /// Включает GameObject для реверсного плеера (Reverse).
     /// </summary>
     public void EnableReversePlayer()
     {
         if (_reversePlayer != null)
         {
             SetPlayerGameObjectActive(_reversePlayer, true);
-        }
-        if (_forwardPlayer != null && _reversePlayer != null && _forwardPlayer.gameObject != _reversePlayer.gameObject)
-        {
-            SetPlayerGameObjectActive(_forwardPlayer, false);
         }
     }
 
@@ -338,10 +327,6 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             if (vp == _forwardPlayer) EnableForwardPlayer();
             else if (vp == _reversePlayer) EnableReversePlayer();
             else SetPlayerGameObjectActive(vp, true);
-        }
-        else
-        {
-            SetPlayerGameObjectActive(vp, false);
         }
         if (vp.renderMode == VideoRenderMode.CameraNearPlane || vp.renderMode == VideoRenderMode.CameraFarPlane)
         {

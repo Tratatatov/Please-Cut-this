@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   DelayBetweenClients: 3
   Clients:
-  - {fileID: 11400000, guid: 553cc99a5a2284d4e9288ea69a3f9462, type: 2}
   - {fileID: 11400000, guid: 1cc20b7be9cf9a84085977d414f01299, type: 2}
   - {fileID: 11400000, guid: ef67f9c68f63b874bbca1459ca98d8bc, type: 2}
+  - {fileID: 11400000, guid: 553cc99a5a2284d4e9288ea69a3f9462, type: 2}
   - {fileID: 11400000, guid: a7993eb1d6e2d3f45ae467fcaba238d0, type: 2}

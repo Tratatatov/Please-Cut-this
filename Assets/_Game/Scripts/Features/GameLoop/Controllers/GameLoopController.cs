@@ -321,20 +321,20 @@ namespace GamePlay.Controllers
                         if (_tvOnMaterial != null && _tv != null)
                         {
                             _tv.SetScreenMaterial(_tvOnMaterial, _tvReverseOnMaterial);
-                            
-                            var levelMediator = ServiceLocator.Get<CutLevelMediator>();
-                            if (_currentClient != null && _currentClient.LevelData != null)
-                            {
-                                levelMediator?.LoadLevel(_currentClient.LevelData);
-                            }
-                            else if (_debugVideotapeConfig != null)
-                            {
-                                levelMediator?.LoadLevel(_debugVideotapeConfig);
-                            }
-
-                            var videoPlayerService = ServiceLocator.Get<VideoPlayerService>();
-                            videoPlayerService?.Play();
                         }
+                        
+                        var levelMediator = ServiceLocator.Get<CutLevelMediator>();
+                        if (_currentClient != null && _currentClient.LevelData != null)
+                        {
+                            levelMediator?.LoadLevel(_currentClient.LevelData);
+                        }
+                        else if (_debugVideotapeConfig != null)
+                        {
+                            levelMediator?.LoadLevel(_debugVideotapeConfig);
+                        }
+
+                        var videoPlayerService = ServiceLocator.Get<VideoPlayerService>();
+                        videoPlayerService?.Play();
 
                         var gameStateManager = ServiceLocator.Get<GameStateManager>();
                         gameStateManager?.SwitchState<MontageGameState>();
