@@ -34,7 +34,7 @@ namespace GamePlay.Controllers
             _stateMachine = new StateMachine();
             _roomViewState = new RoomViewState(cameraControlService);
             _videoEditingViewState = new VideoEditingViewState(cameraControlService);
-            _clientDialogueViewState = new ClientDialogueViewState(cameraControlService);
+            _clientDialogueViewState = new ClientDialogueViewState(cameraControlService, controlsConfig);
             _clientCutsceneViewState = new ClientCutsceneViewState(cameraControlService, onCompleted: SwitchToRoomView);
             _controlsConfig = controlsConfig;
         }
@@ -71,13 +71,13 @@ namespace GamePlay.Controllers
             _stateMachine.ChangeState(_clientCutsceneViewState);
         }
 
-        public void SwitchToCassetteInsertingView(System.Action onCompleted = null, float duration = 2.0f)
+        public void SwitchToCassetteInsertingView(System.Action onCompleted = null, float duration = 0f)
         {
             _cassetteInsertingViewState = new CassetteInsertingViewState(_cameraControlService, onCompleted, duration);
             _stateMachine.ChangeState(_cassetteInsertingViewState);
         }
 
-        public void SwitchToCassetteEjectingView(System.Action onCompleted = null, float duration = 2.0f)
+        public void SwitchToCassetteEjectingView(System.Action onCompleted = null, float duration = 0f)
         {
             _cassetteEjectingViewState = new CassetteEjectingViewState(_cameraControlService, onCompleted, duration);
             _stateMachine.ChangeState(_cassetteEjectingViewState);

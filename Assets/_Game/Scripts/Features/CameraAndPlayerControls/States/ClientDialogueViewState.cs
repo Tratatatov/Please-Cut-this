@@ -8,11 +8,13 @@ namespace GamePlay.States.PlayerView
     public class ClientDialogueViewState : IState
     {
         private readonly CameraControlService _cameraController;
+        private readonly GameControlsConfig _controlsConfig;
         private ClientDataConfig _clientData;
 
-        public ClientDialogueViewState(CameraControlService cameraControlService)
+        public ClientDialogueViewState(CameraControlService cameraControlService, GameControlsConfig controlsConfig = null)
         {
             _cameraController = cameraControlService;
+            _controlsConfig = controlsConfig;
         }
 
         public void SetClientData(ClientDataConfig clientData)
@@ -41,6 +43,12 @@ namespace GamePlay.States.PlayerView
 
         public void Update()
         {
+            KeyCode interactKey = _controlsConfig != null ? _controlsConfig.InteractCassetteKey : KeyCode.E;
+            if (Input.GetKeyDown(interactKey) || Input.GetMouseButtonDown(0))
+            {
+                var dialogueService = ServiceLocator.Get<DialogueService>();
+                dialogueService?.TryAdvanceManual();
+            }
         }
     }
 }

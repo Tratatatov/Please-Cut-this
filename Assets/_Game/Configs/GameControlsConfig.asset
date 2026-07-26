@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e30edb559109a1458c07a58841b0fba, type: 3}
   m_Name: GameControlsConfig
   m_EditorClassIdentifier: 
+  interactCassetteKey: 101
+  ejectCassetteKey: 102
   finishEditingKey: 101
-  toggleCameraKey: 113
-  nextClientKey: 110
-  dismissClientKey: 120
+  toggleCameraKey: 0
+  nextClientKey: 0
+  dismissClientKey: 0

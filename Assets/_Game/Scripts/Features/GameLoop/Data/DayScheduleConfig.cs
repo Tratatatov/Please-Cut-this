@@ -7,6 +7,7 @@ namespace GamePlay.Data
     public class DayScheduleConfig : ScriptableObject
     {
         [Header("Schedule Settings")]
+        public float DelayBeforeFirstClient = 3f;
         public float DelayBetweenClients = 3f;
 
         [Header("Clients Queue")]

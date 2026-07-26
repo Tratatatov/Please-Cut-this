@@ -13,6 +13,7 @@ namespace GamePlay.Controllers
     {
         [Header("Основные конфигурации и ссылки")]
         [SerializeField] private DayScheduleConfig _schedule;
+        [SerializeField] private PhoneCallConfig _phoneCallConfig;
         [SerializeField] private GameControlsConfig _controlsConfig;
         [SerializeField] private TV _tv;
         [SerializeField] private Material _tvOnMaterial;
@@ -27,6 +28,7 @@ namespace GamePlay.Controllers
         public bool IsDebugMode => _isDebugMode;
         public float TimeScale => _timeScale;
         public DayScheduleConfig Schedule => _schedule;
+        public PhoneCallConfig PhoneCallConfig => _phoneCallConfig;
         public VideotapeConfig DebugVideotapeConfig => _isDebugMode ? _debugVideotapeConfig : null;
         public TV Tv => _tv;
         public Material TvOnMaterial => _tvOnMaterial;
