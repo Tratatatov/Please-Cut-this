@@ -10,10 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90b0caf8c780dea42a1fbb1c95888cd8, type: 3}
-  m_Name: 4
+  m_Name: VideotapeConfig
   m_EditorClassIdentifier: 
-  videoClip: {fileID: 32900000, guid: 8899d1398001f894fb9da083877b4aa7, type: 3}
-  reverseVideoClip: {fileID: 32900000, guid: e03a700fa23b0df4a8caea817b4cea8d, type: 3}
-  targetIntervals:
-  - startTime: 0
-    endTime: 19.7
+  videoClip: {fileID: 32900000, guid: cc3b7ff17c4a1aa43ba18ca69a683bea, type: 3}
+  reverseVideoClip: {fileID: 32900000, guid: cc3b7ff17c4a1aa43ba18ca69a683bea, type: 3}
+  targetIntervals: []

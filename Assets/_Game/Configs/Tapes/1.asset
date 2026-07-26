@@ -15,7 +15,7 @@ MonoBehaviour:
   videoClip: {fileID: 32900000, guid: a2974aa268715ce4cbc817d0a536dbcb, type: 3}
   reverseVideoClip: {fileID: 32900000, guid: a616ad0b8e684e545b8689d7d94a4a34, type: 3}
   targetIntervals:
-  - startTime: 5
-    endTime: 10
-  - startTime: 25
-    endTime: 40
+  - startTime: 9.44
+    endTime: 10.82
+  - startTime: 13
+    endTime: 15.2

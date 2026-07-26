@@ -209,6 +209,16 @@ namespace GamePlay.Controllers
 
             Debug.Log($"<color=white>[GameLoopController]</color> Передача кассеты клиенту {_currentClient.ClientName}. Запуск анимации передачи и финального диалога...");
 
+            var validationService = ServiceLocator.Get<CutValidationService>();
+            var statsService = ServiceLocator.Get<GamePlay.Services.GameStatsService>();
+            
+            if (validationService != null && statsService != null)
+            {
+                float score = validationService.GetMatchPercentage();
+                statsService.AddTapeScore(score);
+                Debug.Log($"<color=white>[GameLoopController]</color> Оценка для {_currentClient.ClientName} сохранена: {score:F1}%");
+            }
+
             ClientsController?.ClientView?.PlayTakeAnimation();
 
             string phraseText = !string.IsNullOrEmpty(_currentClient.SuccessPhrase) 
@@ -336,7 +346,7 @@ namespace GamePlay.Controllers
                     _tv.SetScreenMaterial(_tvOnMaterial, _tvReverseOnMaterial);
                 }
 
-                var bootstrapper = Object.FindAnyObjectByType<GameBootstrapper>();
+                var bootstrapper = UnityEngine.Object.FindAnyObjectByType<GameBootstrapper>();
                 if (bootstrapper != null && bootstrapper.endDayVideo != null)
                 {
                     var levelMediator = ServiceLocator.Get<CutLevelMediator>();
@@ -380,6 +390,9 @@ namespace GamePlay.Controllers
                     _cassetteState = CassetteState.TapeReadyToReturn;
                     Debug.Log("<color=white>[GameLoopController]</color> Кассета извлечена. Возврат к виду комнаты. Нажмите E для передачи клиенту.");
                     PlayerViewController?.SwitchToRoomView();
+                    
+                    var gameStateManager = ServiceLocator.Get<GameStateManager>();
+                    gameStateManager?.SwitchState<RoomGameState>();
                 });
             }
         }

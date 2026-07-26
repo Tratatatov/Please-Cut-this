@@ -7,6 +7,7 @@ using Core.Services;
 using GamePlay.View;
 using GamePlay.Data;
 using GamePlay.Controllers;
+using GamePlay.Services;
 
 public class GameBootstrapper : MonoBehaviour
 {
@@ -17,7 +18,7 @@ public class GameBootstrapper : MonoBehaviour
     public GamePlay.Data.DayScheduleConfig todaySchedule;
 
     [Header("Сцена: Финал дня")]
-    public GamePlay.Data.VideotapeConfig endDayVideo;
+    public VideotapeConfig endDayVideo;
 
     [Header("Сцена: Клиент")]
     public GamePlay.View.ClientView clientView;
@@ -53,6 +54,9 @@ public class GameBootstrapper : MonoBehaviour
     public GameObject answerUI;
     public GameObject injectUI;
     public GameObject giveBackUI;
+
+    [Header("Сцена: UI статистики (Конец дня)")]
+    public EndDayStatsUIView endDayStatsView;
 
     [Header("Сцена: Настройки управления")]
     public GamePlay.Data.GameControlsConfig controlsConfig;
@@ -103,11 +107,13 @@ public class GameBootstrapper : MonoBehaviour
         var clientBehaviorController = new GamePlay.Controllers.ClientBehaviorController(clientView, clientRoot, spawnPoint, intermediatePoint, deskPoint, exitPoint, clientMovementConfig);
         var clientsController = new GamePlay.Controllers.ClientsController(clientBehaviorController, clientView);
         var gameStateManager = new GameStateManager();
+        var gameStatsService = new GameStatsService();
+        
         gameStateManager.RegisterState(new RoomGameState(playerViewController));
         gameStateManager.RegisterState(new MontageGameState(videoPlayerControlsView, playerViewController));
         gameStateManager.RegisterState(new ClientDialogueGameState());
         gameStateManager.RegisterState(new PhoneDialogueGameState(controlsConfig, playerViewController));
-        gameStateManager.RegisterState(new EndCinematicGameState(playerViewController));
+        gameStateManager.RegisterState(new EndCinematicGameState(playerViewController, endDayStatsView));
 
         // 2. Регистрация в Service Locator
         ServiceLocator.Register(interactionUIService);
@@ -125,6 +131,11 @@ public class GameBootstrapper : MonoBehaviour
         ServiceLocator.Register(clientBehaviorController);
         ServiceLocator.Register(clientsController);
         ServiceLocator.Register(gameStateManager);
+        ServiceLocator.Register(gameStatsService);
+        if (endDayStatsView != null)
+        {
+            ServiceLocator.Register(endDayStatsView);
+        }
         if (videoPlayerControlsView != null)
         {
             ServiceLocator.Register(videoPlayerControlsView);
@@ -150,6 +161,7 @@ public class GameBootstrapper : MonoBehaviour
         AddService(clientBehaviorController);
         AddService(clientsController);
         AddService(gameStateManager);
+        AddService(gameStatsService);
 
         GamePlay.Data.DayScheduleConfig schedule = todaySchedule;
         GamePlay.Data.PhoneCallConfig phoneCallConfig = null;

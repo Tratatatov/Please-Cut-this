@@ -149,6 +149,11 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     public event Action OnPrepared;
 
     /// <summary>
+    /// Fired when the forward player reaches the end of the video.
+    /// </summary>
+    public event Action OnVideoFinished;
+
+    /// <summary>
     /// Is the video player currently in the middle of a seek operation.
     /// </summary>
     public bool IsSeeking { get; private set; }
@@ -505,6 +510,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             _forwardPlayer.seekCompleted += OnVideoSeekCompleted;
             _forwardPlayer.sendFrameReadyEvents = true;
             _forwardPlayer.frameReady += OnFrameReady;
+            _forwardPlayer.loopPointReached += OnVideoLoopPointReached;
         }
         if (_reversePlayer != null)
         {
@@ -522,6 +528,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             _forwardPlayer.prepareCompleted -= OnVideoPlayerPrepared;
             _forwardPlayer.seekCompleted -= OnVideoSeekCompleted;
             _forwardPlayer.frameReady -= OnFrameReady;
+            _forwardPlayer.loopPointReached -= OnVideoLoopPointReached;
         }
         if (_reversePlayer != null)
         {
@@ -561,6 +568,15 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         if (source == _forwardPlayer || source == _reversePlayer)
         {
             _seekCompletedEventFired = true;
+        }
+    }
+
+    private void OnVideoLoopPointReached(VideoPlayer source)
+    {
+        if (source == _forwardPlayer)
+        {
+            Debug.Log("<color=cyan>[VideoPlayerService]</color> Видео достигло конца (loopPointReached).");
+            OnVideoFinished?.Invoke();
         }
     }
 
