@@ -79,6 +79,13 @@ namespace GamePlay.View
         [Tooltip("Кнопка очистки всех вырезанных отрезков (необязательно)")]
         public Button clearAllCutsButton;
 
+        [Header("Настройки временного маркера (Ожидание второго Cut)")]
+        [Tooltip("Цвет временной полоски (пока ждем второй кат)")]
+        public Color pendingCutColor = new Color(1f, 0f, 0f, 0.5f);
+
+        [Tooltip("Изображение (кнопка Cut), которое будет мигать во время ожидания второго ката")]
+        public Image blinkCutImage;
+
         [Header("Canvas")]
         [Tooltip("Ссылка на Canvas контроля видеоплеера (если не указана, берется с данного объекта или родителя)")]
         [SerializeField] private Canvas _canvas;

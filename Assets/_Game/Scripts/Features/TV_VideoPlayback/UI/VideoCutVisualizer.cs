@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using GamePlay.View;
 using UnityEngine;
 using UnityEngine.UI;
+using Core.Services;
 
-public class VideoCutVisualizer : IInitializable, IDisposableService
+public class VideoCutVisualizer : IInitializable, IDisposableService, IUpdatable
 {
     private VideoCutService _videoCutManager;
     private VideoPlayerService _videoPlayerManager;
@@ -15,6 +16,14 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
     private List<GameObject> _spawnedMarkers = new List<GameObject>();
     private CutMarkerInteractable _selectedMarker;
 
+    private GameObject _pendingMarkerObject;
+    private RectTransform _pendingMarkerRect;
+
+    private Color _pendingCutColor = new Color(1f, 0f, 0f, 0.5f);
+    private Image _blinkCutImage;
+    private float _blinkTimer = 0f;
+    private bool _isBlinkingOn = false;
+
     public VideoCutVisualizer(VideoPlayerControlsUIView controlsView)
     {
         if (controlsView != null)
@@ -22,6 +31,8 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
             _containerRect = controlsView.markerContainer;
             _cutMarkerPrefab = controlsView.markerPrefab;
             _deleteSelectedCutButton = controlsView.deleteSelectedCutButton;
+            _pendingCutColor = controlsView.pendingCutColor;
+            _blinkCutImage = controlsView.blinkCutImage;
         }
     }
 
@@ -40,6 +51,7 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
         if (_videoCutManager != null)
         {
             _videoCutManager.OnIntervalsChanged += UpdateVisuals;
+            _videoCutManager.OnPendingCutChanged += UpdatePendingMarkerVisibility;
         }
         else
         {
@@ -63,11 +75,104 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
         if (_videoCutManager != null)
         {
             _videoCutManager.OnIntervalsChanged -= UpdateVisuals;
+            _videoCutManager.OnPendingCutChanged -= UpdatePendingMarkerVisibility;
         }
 
         if (_deleteSelectedCutButton != null)
         {
             _deleteSelectedCutButton.onClick.RemoveListener(DeleteSelectedMarker);
+        }
+    }
+
+    private void UpdatePendingMarkerVisibility()
+    {
+        if (_videoCutManager != null && _videoCutManager.IsWaitingForEnd)
+        {
+            if (_pendingMarkerObject == null && _cutMarkerPrefab != null && _containerRect != null)
+            {
+                _pendingMarkerObject = Object.Instantiate(_cutMarkerPrefab.gameObject, _containerRect);
+                _pendingMarkerRect = _pendingMarkerObject.GetComponent<RectTransform>();
+                
+                Image img = _pendingMarkerObject.GetComponent<Image>();
+                if (img != null)
+                {
+                    img.color = _pendingCutColor;
+                }
+                
+                CutMarkerInteractable interactable = _pendingMarkerObject.GetComponent<CutMarkerInteractable>();
+                if (interactable != null)
+                {
+                    Object.Destroy(interactable);
+                }
+            }
+            if (_pendingMarkerObject != null)
+            {
+                _pendingMarkerObject.SetActive(true);
+            }
+        }
+        else
+        {
+            if (_pendingMarkerObject != null)
+            {
+                _pendingMarkerObject.SetActive(false);
+            }
+
+            if (_blinkCutImage != null)
+            {
+                var c = _blinkCutImage.color;
+                c.a = 1f;
+                _blinkCutImage.color = c;
+                _blinkTimer = 0f;
+                _isBlinkingOn = false;
+            }
+        }
+    }
+
+    public void Update()
+    {
+        if (_videoCutManager != null && _videoCutManager.IsWaitingForEnd)
+        {
+            if (_pendingMarkerObject != null && _pendingMarkerObject.activeSelf)
+            {
+                if (_videoPlayerManager != null)
+                {
+                    double duration = _videoPlayerManager.Duration;
+                    if (duration > 0)
+                    {
+                        double startTime = _videoCutManager.PendingStartTime;
+                        double endTime = _videoPlayerManager.CurrentTime;
+
+                        if (endTime < startTime)
+                        {
+                            double temp = startTime;
+                            startTime = endTime;
+                            endTime = temp;
+                        }
+
+                        float startFraction = Mathf.Clamp01((float)(startTime / duration));
+                        float endFraction = Mathf.Clamp01((float)(endTime / duration));
+
+                        _pendingMarkerRect.anchorMin = new Vector2(startFraction, 0f);
+                        _pendingMarkerRect.anchorMax = new Vector2(endFraction, 1f);
+                        _pendingMarkerRect.offsetMin = Vector2.zero;
+                        _pendingMarkerRect.offsetMax = Vector2.zero;
+                        _pendingMarkerRect.localScale = Vector3.one;
+                    }
+                }
+            }
+
+            if (_blinkCutImage != null)
+            {
+                _blinkTimer += Time.deltaTime;
+                if (_blinkTimer >= 0.5f) // Blink every 0.5s
+                {
+                    _blinkTimer = 0f;
+                    _isBlinkingOn = !_isBlinkingOn;
+                    var c = _blinkCutImage.color;
+                    c.a = _isBlinkingOn ? 1f : 0.3f;
+                    _blinkCutImage.color = c;
+                }
+            }
         }
     }
 
@@ -143,7 +248,7 @@ public class VideoCutVisualizer : IInitializable, IDisposableService
         startFraction = Mathf.Clamp01(startFraction);
         endFraction = Mathf.Clamp01(endFraction);
 
-        RectTransform newMarker = Object.Instantiate(_cutMarkerPrefab, _containerRect);
+        RectTransform newMarker = Object.Instantiate(_cutMarkerPrefab.gameObject, _containerRect).GetComponent<RectTransform>();
         newMarker.gameObject.SetActive(true);
         _spawnedMarkers.Add(newMarker.gameObject);
 

@@ -11,8 +11,13 @@ public class VideoCutService : IInitializable, IUpdatable
 
     public event Action OnIntervalsChanged;
 
+    public event Action OnPendingCutChanged;
+
     private bool _isWaitingForEnd = false;
     private double _pendingStartTime = 0;
+
+    public bool IsWaitingForEnd => _isWaitingForEnd;
+    public double PendingStartTime => _pendingStartTime;
 
     public void Initialize()
     {
@@ -66,6 +71,7 @@ public class VideoCutService : IInitializable, IUpdatable
             _pendingStartTime = time;
             _isWaitingForEnd = true;
             Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: задана первая точка на {time:F2} сек. Ожидание второй точки...");
+            OnPendingCutChanged?.Invoke();
         }
         else
         {
@@ -83,11 +89,13 @@ public class VideoCutService : IInitializable, IUpdatable
             {
                 Debug.LogWarning("<color=orange>[VideoCutService]</color> Cat-интервал: начало и конец совпадают. Интервал не добавлен.");
                 _isWaitingForEnd = false;
+                OnPendingCutChanged?.Invoke();
                 return;
             }
 
             AddCutInterval(startTime, endTime);
             _isWaitingForEnd = false;
+            OnPendingCutChanged?.Invoke();
             Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
         }
     }
@@ -105,6 +113,7 @@ public class VideoCutService : IInitializable, IUpdatable
         _pendingStartTime = time;
         _isWaitingForEnd = true;
         Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: задано начало на {time:F2} сек. Ожидание конца интервала...");
+        OnPendingCutChanged?.Invoke();
     }
 
     public void SetIntervalEnd()
@@ -137,11 +146,13 @@ public class VideoCutService : IInitializable, IUpdatable
         {
             Debug.LogWarning("<color=orange>[VideoCutService]</color> Cat-интервал: начало и конец совпадают.");
             _isWaitingForEnd = false;
+            OnPendingCutChanged?.Invoke();
             return;
         }
 
         AddCutInterval(startTime, endTime);
         _isWaitingForEnd = false;
+        OnPendingCutChanged?.Invoke();
         Debug.Log($"<color=orange>[VideoCutService]</color> Cat-интервал: добавлен фрагмент с {startTime:F2} сек по {endTime:F2} сек.");
     }
 
@@ -174,6 +185,7 @@ public class VideoCutService : IInitializable, IUpdatable
     {
         intervalsToSkip.Clear();
         _isWaitingForEnd = false;
+        OnPendingCutChanged?.Invoke();
         OnIntervalsChanged?.Invoke();
     }
 }
