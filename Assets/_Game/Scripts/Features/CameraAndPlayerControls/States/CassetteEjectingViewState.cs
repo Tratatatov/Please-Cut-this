@@ -28,7 +28,7 @@ namespace GamePlay.States.PlayerView
             controlsView?.SetCanvasActive(false);
 
             var tvService = ServiceLocator.Get<TVRendererService>();
-            tvService?.UpdateScreenState();
+            tvService?.SwitchToOffState();
 
             Debug.Log($"<color=orange>[CassetteEjectingViewState]</color> Запуск анимации извлечения кассеты (длительность: {_duration} сек). Управление заблокировано.");
         }

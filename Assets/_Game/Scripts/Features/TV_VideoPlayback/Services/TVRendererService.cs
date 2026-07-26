@@ -2,6 +2,13 @@ using UnityEngine;
 
 namespace Core.Services
 {
+    public enum TVScreenState
+    {
+        Off,
+        Forward,
+        Reverse
+    }
+
     public class TVRendererService : IInitializable
     {
         private Renderer _renderer;
@@ -18,7 +25,23 @@ namespace Core.Services
         private const int TargetMaterialIndex = 0;
 
         private bool _lastIsReversed = false;
+        private bool _isCassetteInserted = false;
+        private TVScreenState _currentState = TVScreenState.Off;
 
+        public bool IsCassetteInserted
+        {
+            get => _isCassetteInserted;
+            set
+            {
+                _isCassetteInserted = value;
+                if (!_isCassetteInserted)
+                {
+                    SwitchToOffState();
+                }
+            }
+        }
+
+        public TVScreenState CurrentState => _currentState;
         public Renderer TargetRenderer => _renderer;
         public Renderer ReverseTargetRenderer => _reverseRenderer;
         public Renderer OffTargetRenderer => _offRenderer;
@@ -52,15 +75,93 @@ namespace Core.Services
                 _offDefaultMaterial = _offRenderer.sharedMaterials[TargetMaterialIndex];
             }
 
-            SwitchRenderer(false);
+            _isCassetteInserted = false;
+            SwitchToOffState();
         }
 
         /// <summary>
-        /// Обновляет видимость экранов в зависимости от направления и текущего состояния игры (MontageGameState).
+        /// Переключает экран ТВ в состояние "Выключен" (активен _offRenderer).
         /// </summary>
-        public void UpdateScreenState()
+        public void SwitchToOffState()
         {
-            SwitchRenderer(_lastIsReversed);
+            _currentState = TVScreenState.Off;
+            SetRendererVisibility(_renderer, false);
+            SetRendererVisibility(_reverseRenderer, false);
+            SetRendererVisibility(_offRenderer, true);
+        }
+
+        /// <summary>
+        /// Переключает экран ТВ в состояние прямого воспроизведения (активен _renderer).
+        /// </summary>
+        public void SwitchToForwardState()
+        {
+            if (!_isCassetteInserted)
+            {
+                SwitchToOffState();
+                return;
+            }
+
+            _currentState = TVScreenState.Forward;
+            SetRendererVisibility(_offRenderer, false);
+            SetRendererVisibility(_reverseRenderer, false);
+            SetRendererVisibility(_renderer, true);
+        }
+
+        /// <summary>
+        /// Переключает экран ТВ в состояние реверсивной отмотки (активен _reverseRenderer).
+        /// </summary>
+        public void SwitchToReverseState()
+        {
+            if (!_isCassetteInserted)
+            {
+                SwitchToOffState();
+                return;
+            }
+
+            _currentState = TVScreenState.Reverse;
+            SetRendererVisibility(_offRenderer, false);
+            SetRendererVisibility(_renderer, false);
+
+            if (_reverseRenderer != null && _reverseRenderer != _renderer)
+            {
+                SetRendererVisibility(_reverseRenderer, true);
+            }
+            else
+            {
+                SetRendererVisibility(_renderer, true);
+            }
+        }
+
+        /// <summary>
+        /// Переключает воспроизведение между прямым и реверсивным.
+        /// </summary>
+        public void SwitchPlaybackState(bool isReversed)
+        {
+            _lastIsReversed = isReversed;
+
+            if (!_isCassetteInserted)
+            {
+                SwitchToOffState();
+                return;
+            }
+
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            bool isMontageState = gameStateManager != null && gameStateManager.CurrentState is MontageGameState;
+
+            if (!isMontageState)
+            {
+                SwitchToOffState();
+                return;
+            }
+
+            if (isReversed)
+            {
+                SwitchToReverseState();
+            }
+            else
+            {
+                SwitchToForwardState();
+            }
         }
 
         /// <summary>
@@ -68,36 +169,37 @@ namespace Core.Services
         /// </summary>
         public void SwitchRenderer(bool isReversed)
         {
-            _lastIsReversed = isReversed;
+            SwitchPlaybackState(isReversed);
+        }
+
+        /// <summary>
+        /// Обновляет видимость экранов в зависимости от текущего состояния игры (MontageGameState vs Off).
+        /// </summary>
+        public void UpdateScreenState()
+        {
+            if (!_isCassetteInserted)
+            {
+                SwitchToOffState();
+                return;
+            }
 
             var gameStateManager = ServiceLocator.Get<GameStateManager>();
             bool isMontageState = gameStateManager != null && gameStateManager.CurrentState is MontageGameState;
 
-            if (!isMontageState && _offRenderer != null)
+            if (!isMontageState)
             {
-                SetRendererVisibility(_renderer, false);
-                SetRendererVisibility(_reverseRenderer, false);
-                SetRendererVisibility(_offRenderer, true);
-                return;
-            }
-
-            SetRendererVisibility(_offRenderer, false);
-
-            if (_reverseRenderer == null || _reverseRenderer == _renderer)
-            {
-                SetRendererVisibility(_renderer, true);
-                return;
-            }
-
-            if (isReversed)
-            {
-                SetRendererVisibility(_renderer, false);
-                SetRendererVisibility(_reverseRenderer, true);
+                SwitchToOffState();
             }
             else
             {
-                SetRendererVisibility(_reverseRenderer, false);
-                SetRendererVisibility(_renderer, true);
+                if (_currentState == TVScreenState.Reverse || _lastIsReversed)
+                {
+                    SwitchToReverseState();
+                }
+                else
+                {
+                    SwitchToForwardState();
+                }
             }
         }
 

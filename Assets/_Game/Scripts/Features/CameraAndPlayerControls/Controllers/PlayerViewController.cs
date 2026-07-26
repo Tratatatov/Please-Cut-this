@@ -114,11 +114,14 @@ namespace GamePlay.Controllers
         private void ToggleView()
         {
             var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            var tvService = ServiceLocator.Get<TVRendererService>();
+            bool isCassetteInserted = tvService != null && tvService.IsCassetteInserted;
+
             if (gameStateManager != null && gameStateManager.CurrentState is MontageGameState)
             {
                 gameStateManager.SwitchState<RoomGameState>();
             }
-            else if (gameStateManager != null)
+            else if (gameStateManager != null && isCassetteInserted)
             {
                 gameStateManager.SwitchState<MontageGameState>();
             }

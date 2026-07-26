@@ -268,10 +268,81 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         _reversePlayer.targetMaterialProperty = _forwardPlayer.targetMaterialProperty;
     }
 
+    /// <summary>
+    /// Включает или отключает игровой объект для указанного VideoPlayer.
+    /// </summary>
+    public void SetPlayerGameObjectActive(VideoPlayer vp, bool active)
+    {
+        if (vp == null || vp.gameObject == null) return;
+
+        bool isSharedGameObject = (_forwardPlayer != null && _reversePlayer != null && _forwardPlayer.gameObject == _reversePlayer.gameObject);
+        if (isSharedGameObject && !active)
+        {
+            bool otherActive = (vp == _forwardPlayer && _isReversed) || (vp == _reversePlayer && !_isReversed);
+            if (otherActive) return;
+        }
+
+        if (vp.gameObject.activeSelf != active)
+        {
+            vp.gameObject.SetActive(active);
+            Debug.Log($"<color=cyan>[VideoPlayerService]</color> GameObject плеера '{vp.gameObject.name}' -> SetActive({active})");
+        }
+    }
+
+    /// <summary>
+    /// Включает GameObject для прямого плеера (Forward) и при необходимости отключает реверсный.
+    /// </summary>
+    public void EnableForwardPlayer()
+    {
+        if (_forwardPlayer != null)
+        {
+            SetPlayerGameObjectActive(_forwardPlayer, true);
+        }
+        if (_reversePlayer != null && _forwardPlayer != null && _reversePlayer.gameObject != _forwardPlayer.gameObject)
+        {
+            SetPlayerGameObjectActive(_reversePlayer, false);
+        }
+    }
+
+    /// <summary>
+    /// Включает GameObject для реверсного плеера (Reverse) и при необходимости отключает прямой.
+    /// </summary>
+    public void EnableReversePlayer()
+    {
+        if (_reversePlayer != null)
+        {
+            SetPlayerGameObjectActive(_reversePlayer, true);
+        }
+        if (_forwardPlayer != null && _reversePlayer != null && _forwardPlayer.gameObject != _reversePlayer.gameObject)
+        {
+            SetPlayerGameObjectActive(_forwardPlayer, false);
+        }
+    }
+
+    /// <summary>
+    /// Отключает игровые объекты всех видеоплееров.
+    /// </summary>
+    public void DisableAllPlayers()
+    {
+        if (_forwardPlayer != null) SetPlayerGameObjectActive(_forwardPlayer, false);
+        if (_reversePlayer != null) SetPlayerGameObjectActive(_reversePlayer, false);
+    }
+
     private void SetPlayerVisibility(VideoPlayer vp, bool visible)
     {
         if (vp == null) return;
         Debug.Log($"<color=cyan>[VideoPlayerService]</color> SetPlayerVisibility for {vp.gameObject.name} to {visible}");
+
+        if (visible)
+        {
+            if (vp == _forwardPlayer) EnableForwardPlayer();
+            else if (vp == _reversePlayer) EnableReversePlayer();
+            else SetPlayerGameObjectActive(vp, true);
+        }
+        else
+        {
+            SetPlayerGameObjectActive(vp, false);
+        }
         if (vp.renderMode == VideoRenderMode.CameraNearPlane || vp.renderMode == VideoRenderMode.CameraFarPlane)
         {
             vp.targetCameraAlpha = visible ? 1f : 0f;
@@ -342,6 +413,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
     private void SwitchToForwardPlayer()
     {
+        EnableForwardPlayer();
         if (_reversePlayer != null && _forwardPlayer != null)
         {
             Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> SwitchToForwardPlayer: переключение с {_reversePlayer.gameObject.name} на {_forwardPlayer.gameObject.name}");
@@ -375,6 +447,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
     private void SwitchToReversePlayer()
     {
+        EnableReversePlayer();
         if (_forwardPlayer != null && _reversePlayer != null)
         {
             Debug.Log($"<color=cyan>[TEST VideoPlayerService]</color> SwitchToReversePlayer: переключение с {_forwardPlayer.gameObject.name} на {_reversePlayer.gameObject.name}");
@@ -413,6 +486,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
 
         if (_forwardPlayer != null)
         {
+            SetPlayerGameObjectActive(_forwardPlayer, true);
             _forwardPlayer.Stop();
             _forwardPlayer.playOnAwake = false;
             _forwardPlayer.clip = forwardClip;
@@ -426,6 +500,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             _reversePlayer.playOnAwake = false;
             if (reverseClip != null)
             {
+                SetPlayerGameObjectActive(_reversePlayer, true);
                 _reversePlayer.clip = reverseClip;
                 _targetPrepareCount++;
                 _reversePlayer.Prepare();
@@ -590,10 +665,12 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     {
         if (_isReversed)
         {
+            EnableReversePlayer();
             if (_reversePlayer != null && !_reversePlayer.isPlaying) _reversePlayer.Play();
         }
         else
         {
+            EnableForwardPlayer();
             if (_forwardPlayer != null && !_forwardPlayer.isPlaying) _forwardPlayer.Play();
         }
     }
@@ -602,6 +679,13 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     {
         if (_forwardPlayer != null) _forwardPlayer.Pause();
         if (_reversePlayer != null) _reversePlayer.Pause();
+    }
+
+    public void Stop()
+    {
+        Pause();
+        DisableAllPlayers();
+        Debug.Log("<color=cyan>[VideoPlayerService]</color> Видеоплееры остановлены, их GameObject отключены.");
     }
 
     public void Seek(double seconds)
