@@ -4,12 +4,14 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Unity.Cinemachine;
 using Core.Services;
+using GamePlay.View;
+using GamePlay.Data;
+using GamePlay.Controllers;
 
 public class GameBootstrapper : MonoBehaviour
 {
-    [Header("Настройки режима игры")]
-    [SerializeField] private bool _useTestGameManager = false;
-    [SerializeField] private GamePlay.Controllers.TestGameManager _testGameManager;
+    [Header("Менеджер игры")]
+    [SerializeField] private GameManager _gameManager;
 
     [Header("Расписание дня")]
     public GamePlay.Data.DayScheduleConfig todaySchedule;
@@ -121,34 +123,45 @@ public class GameBootstrapper : MonoBehaviour
         AddService(clientsController);
         AddService(gameStateManager);
 
-        if (_useTestGameManager)
-        {
-            if (_testGameManager == null)
-            {
-                _testGameManager = GetComponent<GamePlay.Controllers.TestGameManager>();
-            }
+        GamePlay.Data.DayScheduleConfig schedule = todaySchedule;
+        VideotapeConfig debugTape = null;
+        TV tvComp = tv;
+        Material tvOnMat = null;
+        Material tvRevMat = null;
+        GameControlsConfig ctrlCfg = controlsConfig;
+        bool isDebugMode = false;
 
-            if (_testGameManager != null)
-            {
-                _testGameManager.enabled = true;
-                _testGameManager.Initialize();
-            }
-            else
-            {
-                Debug.LogWarning("<color=lightblue>[GameBootstrapper]</color> _useTestGameManager включен, но компонент TestGameManager не назначен и не найден на объекте!");
-            }
-        }
-        else
+        if (_gameManager == null)
         {
-            if (_testGameManager != null)
-            {
-                _testGameManager.enabled = false;
-            }
-
-            var gameLoopController = new GamePlay.Controllers.GameLoopController(todaySchedule, clientView, videoPlayerControlsView);
-            ServiceLocator.Register(gameLoopController);
-            AddService(gameLoopController);
+            _gameManager = GetComponent<GameManager>();
         }
+
+        if (_gameManager != null)
+        {
+            _gameManager.enabled = true;
+            if (schedule == null) schedule = _gameManager.Schedule;
+            debugTape = _gameManager.DebugVideotapeConfig;
+            if (tvComp == null) tvComp = _gameManager.Tv;
+            tvOnMat = _gameManager.TvOnMaterial;
+            tvRevMat = _gameManager.TvReverseOnMaterial;
+            if (ctrlCfg == null) ctrlCfg = _gameManager.ControlsConfig;
+            isDebugMode = _gameManager.IsDebugMode;
+        }
+
+        var gameLoopController = new GamePlay.Controllers.GameLoopController(
+            schedule,
+            debugTape,
+            tvComp,
+            tvOnMat,
+            tvRevMat,
+            ctrlCfg,
+            clientView,
+            videoPlayerControlsView,
+            isDebugMode
+        );
+
+        ServiceLocator.Register(gameLoopController);
+        AddService(gameLoopController);
 
         if (clientView != null)
         {
@@ -162,7 +175,7 @@ public class GameBootstrapper : MonoBehaviour
         }
 
         // 4. Установка начального состояния при стандартном запуске
-        if (!_useTestGameManager)
+        if (!isDebugMode)
         {
             gameStateManager.SwitchState<MontageGameState>();
         }

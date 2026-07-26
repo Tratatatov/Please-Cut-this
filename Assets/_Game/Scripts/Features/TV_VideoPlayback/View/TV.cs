@@ -45,5 +45,20 @@ namespace GamePlay.View
         {
             _tvRendererService?.ResetToDefaultMaterial();
         }
+
+        public void TurnOff()
+        {
+            _tvRendererService?.SwitchToOffState();
+        }
+
+        public void SetForwardState()
+        {
+            _tvRendererService?.SwitchToForwardState();
+        }
+
+        public void SetReverseState()
+        {
+            _tvRendererService?.SwitchToReverseState();
+        }
     }
 }

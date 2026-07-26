@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90b0caf8c780dea42a1fbb1c95888cd8, type: 3}
+  m_Name: 5
+  m_EditorClassIdentifier: 
+  videoClip: {fileID: 32900000, guid: b283365e9d934b14a8927570c40090c5, type: 3}
+  reverseVideoClip: {fileID: 32900000, guid: 636dfaecc15b0874aa5d72e336d5bfed, type: 3}
+  targetIntervals:
+  - startTime: 5
+    endTime: 10
+  - startTime: 25
+    endTime: 40
