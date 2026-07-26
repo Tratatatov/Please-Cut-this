@@ -33,6 +33,7 @@ namespace GamePlay.Controllers
         private ClientDataConfig _currentClient;
         private bool _isGameStarted;
         private CassetteState _cassetteState = CassetteState.None;
+        private float _spawnTimer = 0f;
 
         public bool IsDebugMode => _isDebugMode;
         public ClientDataConfig CurrentClient => _currentClient;
@@ -70,6 +71,7 @@ namespace GamePlay.Controllers
             _isGameStarted = false;
             _currentClient = null;
             _cassetteState = CassetteState.None;
+            _spawnTimer = 0f;
 
             EnsureScheduleLoaded();
 
@@ -207,6 +209,7 @@ namespace GamePlay.Controllers
                 Debug.Log($"<color=white>[GameLoopController]</color> Клиент {_currentClient.ClientName} покинул комнату.");
                 _currentClient = null;
                 _cassetteState = CassetteState.None;
+                _spawnTimer = 0f;
 
                 PlayerViewController?.SwitchToRoomView();
             });
@@ -299,6 +302,17 @@ namespace GamePlay.Controllers
             if (playerVC != null && playerVC.IsControlsLocked)
             {
                 return;
+            }
+
+            if (!_isDebugMode && _isGameStarted && _currentClient == null && _clientQueue != null && _clientQueue.Count > 0)
+            {
+                _spawnTimer += Time.deltaTime;
+                float delay = _schedule != null ? _schedule.DelayBetweenClients : 3f;
+                if (_spawnTimer >= delay)
+                {
+                    _spawnTimer = 0f;
+                    SpawnNextClient();
+                }
             }
 
             if (Input.GetKeyDown(interactKey))
