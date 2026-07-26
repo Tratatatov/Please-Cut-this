@@ -7,6 +7,7 @@ using Core.Services;
 using GamePlay.View;
 using GamePlay.Data;
 using GamePlay.Controllers;
+using GamePlay.Services;
 
 public class GameBootstrapper : MonoBehaviour
 {
@@ -15,6 +16,9 @@ public class GameBootstrapper : MonoBehaviour
 
     [Header("Расписание дня")]
     public GamePlay.Data.DayScheduleConfig todaySchedule;
+
+    [Header("Сцена: Финал дня")]
+    public VideotapeConfig endDayVideo;
 
     [Header("Сцена: Клиент")]
     public GamePlay.View.ClientView clientView;
@@ -45,8 +49,25 @@ public class GameBootstrapper : MonoBehaviour
     [Header("Сцена: UI управления видеоплеером")]
     public GamePlay.View.VideoPlayerControlsUIView videoPlayerControlsView;
 
+    [Header("Сцена: Контекстный UI (Подсказки)")]
+    public GameObject speakUI;
+    public GameObject answerUI;
+    public GameObject injectUI;
+    public GameObject giveBackUI;
+
+    [Header("Сцена: UI статистики (Конец дня)")]
+    public EndDayStatsUIView endDayStatsView;
+
     [Header("Сцена: Настройки управления")]
     public GamePlay.Data.GameControlsConfig controlsConfig;
+
+    [Header("Сцена: Конфигурация печати текста")]
+    public Core.Data.TypewriterConfig typewriterConfig;
+
+    [Header("Сцена: Звуки")]
+    public Core.Data.SoundConfig soundConfig;
+    public AudioSource bgmSource;
+    public AudioSource sfxSource;
 
     [Header("Сцена: Камеры (Cinemachine)")]
     public CinemachineCamera mainCamera;
@@ -71,7 +92,10 @@ public class GameBootstrapper : MonoBehaviour
         TVRendererService tvService = tv != null ? tv.TVRendererService : null;
 
         // 1. Создание сервисов (обычные классы C#)
-        var dialogueService = new DialogueService(dialogueNameText, dialogueMessageText, dialogueWindow);
+        var interactionUIService = new InteractionUIService(speakUI, answerUI, injectUI, giveBackUI);
+        var soundService = new SoundService(soundConfig, bgmSource, sfxSource);
+        var typewriterService = new TypewriterService(typewriterConfig);
+        var dialogueService = new DialogueService(dialogueNameText, dialogueMessageText, dialogueWindow, 2.0f, typewriterService);
         var playerManager = new VideoPlayerService(forwardPlayer, reversePlayer, materialTextureProperty, tvService);
         var cutManager = new VideoCutService();
         var validationService = new CutValidationService();
@@ -83,11 +107,18 @@ public class GameBootstrapper : MonoBehaviour
         var clientBehaviorController = new GamePlay.Controllers.ClientBehaviorController(clientView, clientRoot, spawnPoint, intermediatePoint, deskPoint, exitPoint, clientMovementConfig);
         var clientsController = new GamePlay.Controllers.ClientsController(clientBehaviorController, clientView);
         var gameStateManager = new GameStateManager();
+        var gameStatsService = new GameStatsService();
+        
         gameStateManager.RegisterState(new RoomGameState(playerViewController));
         gameStateManager.RegisterState(new MontageGameState(videoPlayerControlsView, playerViewController));
         gameStateManager.RegisterState(new ClientDialogueGameState());
+        gameStateManager.RegisterState(new PhoneDialogueGameState(controlsConfig, playerViewController));
+        gameStateManager.RegisterState(new EndCinematicGameState(playerViewController, endDayStatsView));
 
         // 2. Регистрация в Service Locator
+        ServiceLocator.Register(interactionUIService);
+        ServiceLocator.Register(soundService);
+        ServiceLocator.Register(typewriterService);
         ServiceLocator.Register(dialogueService);
         ServiceLocator.Register(playerManager);
         ServiceLocator.Register(cutManager);
@@ -100,6 +131,11 @@ public class GameBootstrapper : MonoBehaviour
         ServiceLocator.Register(clientBehaviorController);
         ServiceLocator.Register(clientsController);
         ServiceLocator.Register(gameStateManager);
+        ServiceLocator.Register(gameStatsService);
+        if (endDayStatsView != null)
+        {
+            ServiceLocator.Register(endDayStatsView);
+        }
         if (videoPlayerControlsView != null)
         {
             ServiceLocator.Register(videoPlayerControlsView);
@@ -110,6 +146,9 @@ public class GameBootstrapper : MonoBehaviour
         }
 
         // Добавляем в списки для вызова жизненного цикла
+        AddService(interactionUIService);
+        AddService(soundService);
+        AddService(typewriterService);
         AddService(dialogueService);
         AddService(playerManager);
         AddService(cutManager);
@@ -122,12 +161,14 @@ public class GameBootstrapper : MonoBehaviour
         AddService(clientBehaviorController);
         AddService(clientsController);
         AddService(gameStateManager);
+        AddService(gameStatsService);
 
         GamePlay.Data.DayScheduleConfig schedule = todaySchedule;
+        GamePlay.Data.PhoneCallConfig phoneCallConfig = null;
         VideotapeConfig debugTape = null;
         TV tvComp = tv;
-        Material tvOnMat = null;
-        Material tvRevMat = null;
+        Material tvOnMat = tvOnMaterial;
+        Material tvRevMat = tvReverseOnMaterial;
         GameControlsConfig ctrlCfg = controlsConfig;
         bool isDebugMode = false;
 
@@ -140,16 +181,18 @@ public class GameBootstrapper : MonoBehaviour
         {
             _gameManager.enabled = true;
             if (schedule == null) schedule = _gameManager.Schedule;
+            phoneCallConfig = _gameManager.PhoneCallConfig;
             debugTape = _gameManager.DebugVideotapeConfig;
             if (tvComp == null) tvComp = _gameManager.Tv;
-            tvOnMat = _gameManager.TvOnMaterial;
-            tvRevMat = _gameManager.TvReverseOnMaterial;
+            if (tvOnMat == null) tvOnMat = _gameManager.TvOnMaterial;
+            if (tvRevMat == null) tvRevMat = _gameManager.TvReverseOnMaterial;
             if (ctrlCfg == null) ctrlCfg = _gameManager.ControlsConfig;
             isDebugMode = _gameManager.IsDebugMode;
         }
 
         var gameLoopController = new GamePlay.Controllers.GameLoopController(
             schedule,
+            phoneCallConfig,
             debugTape,
             tvComp,
             tvOnMat,
@@ -177,7 +220,7 @@ public class GameBootstrapper : MonoBehaviour
         // 4. Установка начального состояния при стандартном запуске
         if (!isDebugMode)
         {
-            gameStateManager.SwitchState<MontageGameState>();
+            gameLoopController.StartGame();
         }
     }
 

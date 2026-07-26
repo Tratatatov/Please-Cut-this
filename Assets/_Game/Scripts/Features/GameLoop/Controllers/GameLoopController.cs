@@ -20,6 +20,7 @@ namespace GamePlay.Controllers
     public class GameLoopController : IInitializable, IUpdatable, IDisposableService
     {
         private readonly DayScheduleConfig _schedule;
+        private readonly PhoneCallConfig _phoneCallConfig;
         private readonly VideotapeConfig _debugVideotapeConfig;
         private readonly TV _tv;
         private readonly Material _tvOnMaterial;
@@ -33,6 +34,8 @@ namespace GamePlay.Controllers
         private ClientDataConfig _currentClient;
         private bool _isGameStarted;
         private CassetteState _cassetteState = CassetteState.None;
+        private float _spawnTimer = 0f;
+        private float _nextClientDelay = 0f;
 
         public bool IsDebugMode => _isDebugMode;
         public ClientDataConfig CurrentClient => _currentClient;
@@ -44,6 +47,7 @@ namespace GamePlay.Controllers
 
         public GameLoopController(
             DayScheduleConfig schedule = null,
+            PhoneCallConfig phoneCallConfig = null,
             VideotapeConfig debugVideotapeConfig = null,
             TV tv = null,
             Material tvOnMaterial = null,
@@ -55,6 +59,7 @@ namespace GamePlay.Controllers
         )
         {
             _schedule = schedule;
+            _phoneCallConfig = phoneCallConfig;
             _debugVideotapeConfig = debugVideotapeConfig;
             _tv = tv;
             _tvOnMaterial = tvOnMaterial;
@@ -70,6 +75,8 @@ namespace GamePlay.Controllers
             _isGameStarted = false;
             _currentClient = null;
             _cassetteState = CassetteState.None;
+            _spawnTimer = 0f;
+            _nextClientDelay = 0f;
 
             EnsureScheduleLoaded();
 
@@ -114,7 +121,50 @@ namespace GamePlay.Controllers
         {
             _isGameStarted = true;
             Debug.Log("<color=white>[GameLoopController]</color> Старт игры!");
-            SpawnNextClient();
+
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            gameStateManager?.SwitchState<RoomGameState>();
+
+            _nextClientDelay = _schedule != null ? _schedule.DelayBeforeFirstClient : 3f;
+            _spawnTimer = 0f;
+            Debug.Log($"<color=white>[GameLoopController]</color> Ожидание {_nextClientDelay} сек до прихода первого клиента.");
+        }
+
+        public void StartPhoneCallDialogue()
+        {
+            Debug.Log("<color=white>[GameLoopController]</color> Начало стартового телефонного звонка!");
+            
+            var dialogueService = ServiceLocator.Get<DialogueService>();
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+
+            if (dialogueService != null)
+            {
+                System.Action onPhoneCallFinished = null;
+                onPhoneCallFinished = () =>
+                {
+                    dialogueService.OnDialogueCompleted -= onPhoneCallFinished;
+                    
+                    if (gameStateManager != null && gameStateManager.CurrentState is PhoneDialogueGameState)
+                    {
+                        gameStateManager.SwitchState<RoomGameState>();
+                    }
+
+                    _nextClientDelay = _phoneCallConfig.DelayAfterCall;
+                    _spawnTimer = 0f;
+                    Debug.Log($"<color=white>[GameLoopController]</color> Телефонный звонок завершен. Ожидание {_nextClientDelay} сек до первого клиента.");
+                };
+
+                dialogueService.OnDialogueCompleted += onPhoneCallFinished;
+                
+                gameStateManager?.SwitchState<PhoneDialogueGameState>();
+                
+                dialogueService.PlayDialogue("Телефон", _phoneCallConfig.Phrases);
+                dialogueService.PauseDialogue(); // Останавливаем автоматическое переключение фраз
+            }
+            else
+            {
+                SpawnNextClient();
+            }
         }
 
         public void CallClient()
@@ -158,6 +208,16 @@ namespace GamePlay.Controllers
             }
 
             Debug.Log($"<color=white>[GameLoopController]</color> Передача кассеты клиенту {_currentClient.ClientName}. Запуск анимации передачи и финального диалога...");
+
+            var validationService = ServiceLocator.Get<CutValidationService>();
+            var statsService = ServiceLocator.Get<GamePlay.Services.GameStatsService>();
+            
+            if (validationService != null && statsService != null)
+            {
+                float score = validationService.GetMatchPercentage();
+                statsService.AddTapeScore(score);
+                Debug.Log($"<color=white>[GameLoopController]</color> Оценка для {_currentClient.ClientName} сохранена: {score:F1}%");
+            }
 
             ClientsController?.ClientView?.PlayTakeAnimation();
 
@@ -207,8 +267,16 @@ namespace GamePlay.Controllers
                 Debug.Log($"<color=white>[GameLoopController]</color> Клиент {_currentClient.ClientName} покинул комнату.");
                 _currentClient = null;
                 _cassetteState = CassetteState.None;
+                _spawnTimer = 0f;
 
-                PlayerViewController?.SwitchToRoomView();
+                if (_clientQueue != null && _clientQueue.Count == 0)
+                {
+                    PlayEndCinematic();
+                }
+                else
+                {
+                    PlayerViewController?.SwitchToRoomView();
+                }
             });
         }
 
@@ -251,11 +319,49 @@ namespace GamePlay.Controllers
                         _tv.TVRendererService.SwitchToForwardState();
                     }
                     Debug.Log($"<color=white>[GameLoopController]</color> Имитация вставки завершена: кассета '{videotapeConfig.name}' запущена на ТВ.");
-                }, 2.0f);
+                });
             }
             else
             {
                 Debug.LogError("<color=white>[GameLoopController]</color> Cannot switch to CassetteInsertingView: PlayerViewController is NULL!");
+            }
+        }
+
+        public void PlayEndCinematic()
+        {
+            Debug.Log("<color=white>[GameLoopController]</color> Воспроизведение финального видео...");
+
+            var playerVC = PlayerViewController;
+            if (playerVC != null)
+            {
+                TVRendererService tvService = _tv != null ? _tv.TVRendererService : null;
+                if (tvService != null && _tvOnMaterial != null)
+                {
+                    tvService.SetScreenMaterial(_tvOnMaterial, _tvReverseOnMaterial);
+                    tvService.IsCassetteInserted = true;
+                    tvService.SwitchToForwardState();
+                }
+                else if (_tv != null && _tvOnMaterial != null)
+                {
+                    _tv.SetScreenMaterial(_tvOnMaterial, _tvReverseOnMaterial);
+                }
+
+                var bootstrapper = UnityEngine.Object.FindAnyObjectByType<GameBootstrapper>();
+                if (bootstrapper != null && bootstrapper.endDayVideo != null)
+                {
+                    var levelMediator = ServiceLocator.Get<CutLevelMediator>();
+                    levelMediator?.LoadLevel(bootstrapper.endDayVideo);
+                }
+                else
+                {
+                    Debug.LogWarning("<color=white>[GameLoopController]</color> Не найдено видео для конца дня (EndDayVideo) в GameBootstrapper!");
+                }
+
+                var videoPlayerService = ServiceLocator.Get<VideoPlayerService>();
+                videoPlayerService?.Play();
+
+                var gameStateManager = ServiceLocator.Get<GameStateManager>();
+                gameStateManager?.SwitchState<EndCinematicGameState>();
             }
         }
 
@@ -284,7 +390,10 @@ namespace GamePlay.Controllers
                     _cassetteState = CassetteState.TapeReadyToReturn;
                     Debug.Log("<color=white>[GameLoopController]</color> Кассета извлечена. Возврат к виду комнаты. Нажмите E для передачи клиенту.");
                     PlayerViewController?.SwitchToRoomView();
-                }, 2.0f);
+                    
+                    var gameStateManager = ServiceLocator.Get<GameStateManager>();
+                    gameStateManager?.SwitchState<RoomGameState>();
+                });
             }
         }
 
@@ -299,6 +408,24 @@ namespace GamePlay.Controllers
             if (playerVC != null && playerVC.IsControlsLocked)
             {
                 return;
+            }
+
+            var gameStateManager = ServiceLocator.Get<GameStateManager>();
+            if (gameStateManager != null && gameStateManager.CurrentState is PhoneDialogueGameState)
+            {
+                return; // Input is handled by PhoneDialogueGameState
+            }
+
+            if (!_isDebugMode && _isGameStarted && _currentClient == null && _clientQueue != null && _clientQueue.Count > 0)
+            {
+                _spawnTimer += Time.deltaTime;
+                float delay = _nextClientDelay > 0f ? _nextClientDelay : (_schedule != null ? _schedule.DelayBetweenClients : 3f);
+                if (_spawnTimer >= delay)
+                {
+                    _spawnTimer = 0f;
+                    _nextClientDelay = 0f;
+                    SpawnNextClient();
+                }
             }
 
             if (Input.GetKeyDown(interactKey))
@@ -321,24 +448,24 @@ namespace GamePlay.Controllers
                         if (_tvOnMaterial != null && _tv != null)
                         {
                             _tv.SetScreenMaterial(_tvOnMaterial, _tvReverseOnMaterial);
-                            
-                            var levelMediator = ServiceLocator.Get<CutLevelMediator>();
-                            if (_currentClient != null && _currentClient.LevelData != null)
-                            {
-                                levelMediator?.LoadLevel(_currentClient.LevelData);
-                            }
-                            else if (_debugVideotapeConfig != null)
-                            {
-                                levelMediator?.LoadLevel(_debugVideotapeConfig);
-                            }
-
-                            var videoPlayerService = ServiceLocator.Get<VideoPlayerService>();
-                            videoPlayerService?.Play();
                         }
+                        
+                        var levelMediator = ServiceLocator.Get<CutLevelMediator>();
+                        if (_currentClient != null && _currentClient.LevelData != null)
+                        {
+                            levelMediator?.LoadLevel(_currentClient.LevelData);
+                        }
+                        else if (_debugVideotapeConfig != null)
+                        {
+                            levelMediator?.LoadLevel(_debugVideotapeConfig);
+                        }
+
+                        var videoPlayerService = ServiceLocator.Get<VideoPlayerService>();
+                        videoPlayerService?.Play();
 
                         var gameStateManager = ServiceLocator.Get<GameStateManager>();
                         gameStateManager?.SwitchState<MontageGameState>();
-                    }, 2.0f);
+                    });
                 }
                 else if (_cassetteState == CassetteState.TapeReadyToReturn)
                 {

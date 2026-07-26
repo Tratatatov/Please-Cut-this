@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 152e30b9cfb44d846a7339c4adb2fe9a, type: 3}
   m_Name: FirstClient
   m_EditorClassIdentifier: 
-  ClientName: "\u041A\u043B\u0438\u0435\u043D\u0442"
+  ClientName: 
   ModelType: 0
-  PhraseDelay: 2
+  PhraseDelay: 3
   DialoguePhrases: []
   ArrivalPhrases:
   - "\u041F\u0440\u0438\u0432\u0435\u0442. \u0423 \u043C\u0435\u043D\u044F \u0442\u0443\u0442

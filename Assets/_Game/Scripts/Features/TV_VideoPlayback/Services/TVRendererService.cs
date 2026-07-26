@@ -147,8 +147,9 @@ namespace Core.Services
 
             var gameStateManager = ServiceLocator.Get<GameStateManager>();
             bool isMontageState = gameStateManager != null && gameStateManager.CurrentState is MontageGameState;
+            bool isEndCinematicState = gameStateManager != null && gameStateManager.CurrentState is EndCinematicGameState;
 
-            if (!isMontageState)
+            if (!isMontageState && !isEndCinematicState)
             {
                 SwitchToOffState();
                 return;
@@ -185,8 +186,9 @@ namespace Core.Services
 
             var gameStateManager = ServiceLocator.Get<GameStateManager>();
             bool isMontageState = gameStateManager != null && gameStateManager.CurrentState is MontageGameState;
+            bool isEndCinematicState = gameStateManager != null && gameStateManager.CurrentState is EndCinematicGameState;
 
-            if (!isMontageState)
+            if (!isMontageState && !isEndCinematicState)
             {
                 SwitchToOffState();
             }

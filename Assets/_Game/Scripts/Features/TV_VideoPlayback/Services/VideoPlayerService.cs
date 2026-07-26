@@ -149,6 +149,11 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
     public event Action OnPrepared;
 
     /// <summary>
+    /// Fired when the forward player reaches the end of the video.
+    /// </summary>
+    public event Action OnVideoFinished;
+
+    /// <summary>
     /// Is the video player currently in the middle of a seek operation.
     /// </summary>
     public bool IsSeeking { get; private set; }
@@ -289,33 +294,22 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         }
     }
 
-    /// <summary>
-    /// Включает GameObject для прямого плеера (Forward) и при необходимости отключает реверсный.
-    /// </summary>
     public void EnableForwardPlayer()
     {
         if (_forwardPlayer != null)
         {
             SetPlayerGameObjectActive(_forwardPlayer, true);
         }
-        if (_reversePlayer != null && _forwardPlayer != null && _reversePlayer.gameObject != _forwardPlayer.gameObject)
-        {
-            SetPlayerGameObjectActive(_reversePlayer, false);
-        }
     }
 
     /// <summary>
-    /// Включает GameObject для реверсного плеера (Reverse) и при необходимости отключает прямой.
+    /// Включает GameObject для реверсного плеера (Reverse).
     /// </summary>
     public void EnableReversePlayer()
     {
         if (_reversePlayer != null)
         {
             SetPlayerGameObjectActive(_reversePlayer, true);
-        }
-        if (_forwardPlayer != null && _reversePlayer != null && _forwardPlayer.gameObject != _reversePlayer.gameObject)
-        {
-            SetPlayerGameObjectActive(_forwardPlayer, false);
         }
     }
 
@@ -338,10 +332,6 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             if (vp == _forwardPlayer) EnableForwardPlayer();
             else if (vp == _reversePlayer) EnableReversePlayer();
             else SetPlayerGameObjectActive(vp, true);
-        }
-        else
-        {
-            SetPlayerGameObjectActive(vp, false);
         }
         if (vp.renderMode == VideoRenderMode.CameraNearPlane || vp.renderMode == VideoRenderMode.CameraFarPlane)
         {
@@ -520,6 +510,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             _forwardPlayer.seekCompleted += OnVideoSeekCompleted;
             _forwardPlayer.sendFrameReadyEvents = true;
             _forwardPlayer.frameReady += OnFrameReady;
+            _forwardPlayer.loopPointReached += OnVideoLoopPointReached;
         }
         if (_reversePlayer != null)
         {
@@ -537,6 +528,7 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
             _forwardPlayer.prepareCompleted -= OnVideoPlayerPrepared;
             _forwardPlayer.seekCompleted -= OnVideoSeekCompleted;
             _forwardPlayer.frameReady -= OnFrameReady;
+            _forwardPlayer.loopPointReached -= OnVideoLoopPointReached;
         }
         if (_reversePlayer != null)
         {
@@ -576,6 +568,15 @@ public class VideoPlayerService : IInitializable, IUpdatable, IDisposableService
         if (source == _forwardPlayer || source == _reversePlayer)
         {
             _seekCompletedEventFired = true;
+        }
+    }
+
+    private void OnVideoLoopPointReached(VideoPlayer source)
+    {
+        if (source == _forwardPlayer)
+        {
+            Debug.Log("<color=cyan>[VideoPlayerService]</color> Видео достигло конца (loopPointReached).");
+            OnVideoFinished?.Invoke();
         }
     }
 

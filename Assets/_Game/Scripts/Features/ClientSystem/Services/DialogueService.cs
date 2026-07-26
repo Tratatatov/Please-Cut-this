@@ -13,6 +13,7 @@ namespace Core.Services
         private readonly TMP_Text _messageText;
         private readonly GameObject _dialogueWindow;
         private readonly Canvas _dialogueCanvas;
+        private readonly TypewriterService _typewriterService;
         private readonly float _fallbackPhraseDelay;
 
         private List<DialoguePhrase> _currentPhrases;
@@ -35,16 +36,17 @@ namespace Core.Services
             ? _currentPhrases[_currentPhraseIndex].Text 
             : string.Empty;
 
-        public DialogueService(TMP_Text nameText, TMP_Text messageText, GameObject dialogueWindow = null, float fallbackPhraseDelay = 2.0f)
+        public DialogueService(TMP_Text nameText, TMP_Text messageText, GameObject dialogueWindow = null, float fallbackPhraseDelay = 2.0f, TypewriterService typewriterService = null)
         {
             _nameText = nameText;
             _messageText = messageText;
             _dialogueWindow = dialogueWindow;
             _fallbackPhraseDelay = fallbackPhraseDelay;
+            _typewriterService = typewriterService;
         }
 
-        public DialogueService(TMP_Text nameText, TMP_Text messageText, Canvas dialogueCanvas, float fallbackPhraseDelay = 2.0f)
-            : this(nameText, messageText, dialogueCanvas != null ? dialogueCanvas.gameObject : null, fallbackPhraseDelay)
+        public DialogueService(TMP_Text nameText, TMP_Text messageText, Canvas dialogueCanvas, float fallbackPhraseDelay = 2.0f, TypewriterService typewriterService = null)
+            : this(nameText, messageText, dialogueCanvas != null ? dialogueCanvas.gameObject : null, fallbackPhraseDelay, typewriterService)
         {
             _dialogueCanvas = dialogueCanvas;
         }
@@ -142,21 +144,24 @@ namespace Core.Services
             SetWindowActive(false);
         }
 
-        public void Update()
+        public void TryAdvanceManual()
         {
-            if (!_isSpeaking || _isPaused || _currentPhrases == null || _currentPhrases.Count == 0)
+            if (!_isSpeaking || _currentPhrases == null || _currentPhrases.Count == 0) return;
+
+            if (_typewriterService != null && _messageText != null && _typewriterService.IsTyping(_messageText))
             {
-                return;
+                _typewriterService.Skip(_messageText);
             }
-
-            _phraseTimer += Time.deltaTime;
-
-            float currentDelay = GetCurrentPhraseDelay();
-
-            if (_phraseTimer >= currentDelay)
+            else
             {
                 AdvanceToNextPhrase();
             }
+        }
+
+        public void Update()
+        {
+            // Auto-advance is disabled per user request. 
+            // All dialogue advancements must be done manually via TryAdvanceManual().
         }
 
         private float GetCurrentPhraseDelay()
@@ -190,7 +195,14 @@ namespace Core.Services
 
             if (_messageText != null)
             {
-                _messageText.text = message;
+                if (_typewriterService != null)
+                {
+                    _typewriterService.TypeText(_messageText, message);
+                }
+                else
+                {
+                    _messageText.text = message;
+                }
             }
 
             SetWindowActive(true);
@@ -225,6 +237,10 @@ namespace Core.Services
 
             if (_messageText != null)
             {
+                if (_typewriterService != null)
+                {
+                    _typewriterService.Stop(_messageText);
+                }
                 _messageText.text = string.Empty;
             }
         }
